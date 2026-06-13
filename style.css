@@ -1,0 +1,19 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+}
+
+canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+}
+
+.car-select-btn.active {
+    border-color: #06b6d4;
+    background-color: rgba(6, 182, 212, 0.05);
+}
