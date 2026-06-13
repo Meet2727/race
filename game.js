@@ -202,6 +202,23 @@ function handleInput(e) {
     if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') moveRight();
 }
 
+// --- High-Performance Mobile Touch Architecture ---
+window.addEventListener('touchstart', (e) => {
+    if (gameState !== 'PLAYING') return;
+    
+    // Ignore direct clicks interacting with interactive UI Buttons
+    if (e.target.tagName === 'BUTTON') return;
+
+    const touchX = e.touches[0].clientX;
+    const screenWidth = window.innerWidth;
+
+    if (touchX < screenWidth / 2) {
+        moveLeft();
+    } else {
+        moveRight();
+    }
+}, { passive: false });
+
 function check3DCollision(box1, box2) {
     return (
         Math.abs(box1.position.x - box2.position.x) < 1.3 &&
@@ -267,6 +284,19 @@ const setupCarSelection = () => {
     });
 };
 
+function exitToMenu() {
+    gameState = 'MENU';
+    hud.classList.add('hidden');
+    gameoverOverlay.classList.add('hidden');
+    menuOverlay.classList.remove('hidden');
+    
+    // Clear obstacles
+    obstacles.forEach(obs => scene.remove(obs));
+    obstacles = [];
+    
+    if (playerCar) scene.remove(playerCar);
+}
+
 document.getElementById('start-btn').addEventListener('click', () => {
     menuOverlay.classList.add('hidden');
     hud.classList.remove('hidden');
@@ -287,9 +317,9 @@ document.getElementById('restart-btn').addEventListener('click', () => {
     gameState = 'PLAYING';
 });
 
-// Mobile Input Listeners
-document.getElementById('mobile-ctrl-left').addEventListener('touchstart', (e) => { e.preventDefault(); moveLeft(); });
-document.getElementById('mobile-ctrl-right').addEventListener('touchstart', (e) => { e.preventDefault(); moveRight(); });
+// Back to menu event routing binds
+document.getElementById('hud-back-btn').addEventListener('click', exitToMenu);
+document.getElementById('go-back-menu-btn').addEventListener('click', exitToMenu);
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
