@@ -4,7 +4,7 @@ html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    touch-action: none; /* Prevents mobile browser pull-to-refresh gestures */
+    touch-action: none; /* Disables double-tap zoom gestures on mobile screen frames */
 }
 
 canvas {
