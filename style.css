@@ -4,8 +4,9 @@ html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    touch-action: none;
+    touch-action: none; /* Block default viewport scrolling during game interaction */
 }
 canvas {
-    display: block;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
