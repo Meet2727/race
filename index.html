@@ -3,84 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Velocity // Three.js Arcade</title>
+    <title>Neon Climb</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen overflow-hidden font-mono select-none">
+<body class="bg-slate-950 text-slate-100 min-h-screen overflow-hidden font-mono select-none flex flex-col items-center justify-center">
 
-    <div id="hud" class="absolute top-4 left-4 right-4 z-10 flex justify-between pointer-events-none hidden">
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl px-4 py-2 backdrop-blur-md pointer-events-auto flex flex-col gap-1">
-            <span class="text-[10px] text-slate-400 uppercase block tracking-wider">Score</span>
-            <span id="score-val" class="text-xl font-bold text-cyan-400">0</span>
+    <div class="relative rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 w-full max-w-3xl aspect-[16/9]">
+        <canvas id="gameCanvas" width="800" height="450" class="block w-full h-full"></canvas>
+
+        <div id="hud" class="absolute top-4 left-4 right-4 z-10 flex justify-between pointer-events-none hidden">
+            <div class="flex gap-4">
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl px-4 py-2 backdrop-blur-md flex items-center gap-2">
+                    <i class="fa-solid fa-flag-checkered text-cyan-400"></i>
+                    <div>
+                        <span class="text-[9px] text-slate-400 block uppercase tracking-wider">Distance</span>
+                        <span id="distance-val" class="text-base font-bold font-mono text-cyan-400">0m</span>
+                    </div>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl px-4 py-2 backdrop-blur-md flex items-center gap-2">
+                    <i class="fa-solid fa-coins text-amber-400"></i>
+                    <div>
+                        <span class="text-[9px] text-slate-400 block uppercase tracking-wider">Coins</span>
+                        <span id="coins-val" class="text-base font-bold font-mono text-amber-400">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-slate-900/80 border border-slate-800 rounded-xl px-4 py-2 backdrop-blur-md flex flex-col justify-center w-36">
+                <div class="flex justify-between text-[9px] text-slate-400 uppercase tracking-wider mb-1">
+                    <span>Fuel</span>
+                    <span id="fuel-txt" class="text-emerald-400 font-bold">100%</span>
+                </div>
+                <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden p-[1px] border border-slate-800">
+                    <div id="fuel-bar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-100" style="width: 100%;"></div>
+                </div>
+            </div>
         </div>
-        
-        <button id="hud-back-btn" class="bg-slate-900/80 hover:bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 backdrop-blur-md pointer-events-auto text-xs font-bold text-slate-300 active:scale-95 transition-all cursor-pointer">
-            BACK TO MENU
-        </button>
 
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl px-4 py-2 backdrop-blur-md text-right pointer-events-auto flex flex-col gap-1">
-            <span class="text-[10px] text-slate-400 uppercase block tracking-wider">Speed</span>
-            <span id="speed-val" class="text-xl font-bold text-amber-400">0 MPH</span>
+        <div id="menu-overlay" class="absolute inset-0 z-20 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center">
+            <div class="w-16 h-16 bg-cyan-500/10 rounded-2xl flex items-center justify-center border border-cyan-400/30 mb-4 animate-bounce">
+                <i class="fa-solid fa-truck-monster text-3xl text-cyan-400"></i>
+            </div>
+            <h1 class="text-4xl font-black bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent mb-2 tracking-tight">NEON CLIMB RACER</h1>
+            <p class="text-xs text-slate-400 mb-8 max-w-sm leading-relaxed font-sans">Balance your engine torque, fight gravity across custom mathematical ridges, and manage your fuel reserve system.</p>
+            <button id="start-btn" class="w-full max-w-xs py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-bold rounded-xl shadow-lg shadow-cyan-500/20 hover:scale-105 transition-transform active:scale-95 cursor-pointer">
+                START DRIVING
+            </button>
+        </div>
+
+        <div id="gameover-overlay" class="absolute inset-0 z-20 bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center hidden">
+            <div class="w-16 h-16 bg-rose-500/10 rounded-2xl flex items-center justify-center border border-rose-500/30 mb-4">
+                <i class="fa-solid fa-skull-crossbones text-3xl text-rose-500"></i>
+            </div>
+            <h2 id="fail-reason" class="text-2xl font-bold text-rose-500 mb-1 tracking-wider">VEHICLE FLIPPED</h2>
+            <p class="text-xs text-slate-400 mb-6 font-sans">Chassis infrastructure fractured beyond limits.</p>
+            
+            <div class="bg-slate-900 border border-slate-800 rounded-xl px-6 py-4 mb-8 w-full max-w-xs space-y-2">
+                <div class="flex justify-between text-xs text-slate-400">Distance Travelled: <span id="final-distance" class="font-bold text-slate-100">0m</span></div>
+                <div class="flex justify-between text-xs text-slate-400">Total Vaulted Coins: <span id="final-coins" class="font-bold text-slate-100">0</span></div>
+            </div>
+
+            <button id="restart-btn" class="w-full max-w-xs py-3.5 bg-slate-100 text-slate-950 font-bold rounded-xl shadow-lg hover:scale-105 transition-transform active:scale-95 cursor-pointer">
+                TRY RESPAWNING
+            </button>
+        </div>
+
+        <div id="mobile-controls" class="absolute bottom-4 left-4 right-4 z-10 flex justify-between pointer-events-none md:hidden hidden">
+            <button id="ctrl-brake" class="w-20 h-20 rounded-2xl border border-slate-700/60 bg-slate-900/60 active:bg-rose-500/20 backdrop-blur-md flex flex-col items-center justify-center pointer-events-auto text-slate-400 active:text-rose-400 active:scale-90 transition-all">
+                <i class="fa-solid fa-rotate-left text-xl mb-1"></i>
+                <span class="text-[9px] uppercase font-bold tracking-wider">Brake / Rotate Left</span>
+            </button>
+            <button id="ctrl-gas" class="w-20 h-20 rounded-2xl border border-slate-700/60 bg-slate-900/60 active:bg-emerald-500/20 backdrop-blur-md flex flex-col items-center justify-center pointer-events-auto text-slate-400 active:text-emerald-400 active:scale-90 transition-all">
+                <i class="fa-solid fa-rotate-right text-xl mb-1"></i>
+                <span class="text-[9px] uppercase font-bold tracking-wider">Gas / Rotate Right</span>
+            </button>
         </div>
     </div>
 
-    <div id="menu-overlay" class="absolute inset-0 z-20 bg-slate-950/90 flex flex-col items-center justify-center p-6">
-        <h1 class="text-4xl font-black bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent mb-2 tracking-tight">3D CYBER RUNNER</h1>
-        <p class="text-xs text-slate-400 mb-8 max-w-sm text-center">Select your vehicle matrix blueprint and survive the incoming traffic grid.</p>
-        
-        <div class="grid grid-cols-3 gap-4 max-w-md w-full mb-8">
-            <button id="car-0" class="car-select-btn active border-2 border-cyan-500 bg-slate-900 p-4 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer">
-                <div class="w-12 h-6 bg-cyan-500 rounded shadow-[0_0_10px_rgba(6,182,212,0.5)]"></div>
-                <span class="text-xs font-bold mt-1">Neon Sedan</span>
-                <span class="text-[10px] text-slate-400">Handling: Agile</span>
-            </button>
-            <button id="car-1" class="car-select-btn border border-slate-800 bg-slate-900 p-4 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer">
-                <div class="w-14 h-4 bg-amber-500 rounded-sm shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
-                <span class="text-xs font-bold mt-1">F1 Racer</span>
-                <span class="text-[10px] text-slate-400">Handling: Fast</span>
-            </button>
-            <button id="car-2" class="car-select-btn border border-slate-800 bg-slate-900 p-4 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer">
-                <div class="w-10 h-8 bg-purple-500 rounded-md shadow-[0_0_10px_rgba(168,85,247,0.5)]"></div>
-                <span class="text-xs font-bold mt-1">Cyber Truck</span>
-                <span class="text-[10px] text-slate-400">Handling: Heavy</span>
-            </button>
-        </div>
-
-        <button id="start-btn" class="w-full max-w-xs py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-bold rounded-xl shadow-lg shadow-cyan-500/20 hover:scale-105 transition-transform active:scale-95 cursor-pointer">
-            ENGAGE HYPERDRIVE
-        </button>
+    <div class="mt-4 text-center text-[11px] text-slate-500 hidden md:block">
+        Hold <span class="bg-slate-900 px-1.5 py-0.5 border border-slate-800 rounded text-slate-400 font-mono">→ / D</span> for Throttle/Lean Right, and 
+        <span class="bg-slate-900 px-1.5 py-0.5 border border-slate-800 rounded text-slate-400 font-mono">← / A</span> for Brake/Lean Left.
     </div>
 
-    <div id="gameover-overlay" class="absolute inset-0 z-20 bg-slate-950/95 flex flex-col items-center justify-center p-6 hidden">
-        <h2 class="text-3xl font-bold text-rose-500 mb-2 tracking-wider">CRASH DETECTED</h2>
-        <p class="text-xs text-slate-400 mb-6">Structural grid integrity compromised.</p>
-        
-        <div class="bg-slate-900 border border-slate-800 rounded-xl px-6 py-4 mb-6 w-full max-w-xs space-y-2">
-            <div class="flex justify-between text-xs text-slate-400">Final Score: <span id="final-score" class="font-bold text-slate-100">0</span></div>
-        </div>
-
-        <div class="flex flex-col gap-3 w-full max-w-xs">
-            <button id="restart-btn" class="w-full py-4 bg-slate-100 text-slate-950 font-bold rounded-xl shadow-lg hover:scale-105 transition-transform active:scale-95 cursor-pointer">
-                REMATERIALIZE VEHICLE
-            </button>
-            <button id="go-back-menu-btn" class="w-full py-3 bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs rounded-xl transition-all cursor-pointer">
-                RETURN TO MAIN MENU
-            </button>
-        </div>
-    </div>
-
-    <div class="absolute bottom-6 left-4 right-4 flex justify-between pointer-events-none md:hidden text-[10px] text-slate-600 opacity-60">
-        <span>TAP LEFT SIDE ←</span>
-        <span>TAP RIGHT SIDE →</span>
-    </div>
-
-    <div class="absolute bottom-4 left-0 right-0 text-center pointer-events-none text-[11px] text-slate-500 hidden md:block">
-        Use <span class="bg-slate-900 px-1.5 py-0.5 border border-slate-800 rounded text-slate-400 font-mono">← / A</span> and 
-        <span class="bg-slate-900 px-1.5 py-0.5 border border-slate-800 rounded text-slate-400 font-mono">→ / D</span> to switch lanes.
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="game.js"></script>
 </body>
 </html>
