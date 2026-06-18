@@ -29,7 +29,6 @@ let selectedCarIdx = 0;
 let selectedMapIdx = 0;
 
 let gameState = 'MENU';
-let scoreDistance = 0;
 let coins = 0;
 let fuel = 100;
 let cameraX = 0;
@@ -43,6 +42,7 @@ let vehicle = {
 
 let inputs = { forward: false, backward: false };
 let tokenAssets = [];
+let chunkMarkerX = 2000;
 
 // --- Smooth Procedural Map Terrain Math Pipeline ---
 function getTerrainHeight(x) {
@@ -50,15 +50,15 @@ function getTerrainHeight(x) {
 
     const biome = BIOMES[selectedMapIdx];
     
-    // Complex layered harmonic waves configurations build smoother continuous terrain curves
+    // Layered harmonic curves generate perfectly rolling, smooth terrain
     let layer1 = Math.sin(x * biome.smoothness) * biome.amplitude;
     let layer2 = Math.cos(x * biome.smoothness * 0.4) * (biome.amplitude * 0.5);
-    let layer3 = Math.sin(x * biome.smoothness * 2.5) * 8; // Small bumps micro variation details
+    let layer3 = Math.sin(x * biome.smoothness * 2.5) * 8; 
 
     return 350 - (layer1 + layer2 + layer3);
 }
 
-// Extract surface normal tangent slope values to project directional movement vectors cleanly
+// Extract surface slope angle to project directional motion vectors along the ground tangent
 function getTerrainSlopeAngle(x) {
     let step = 2;
     let y1 = getTerrainHeight(x - step);
@@ -88,72 +88,69 @@ function updateSimulationTick() {
     } else if (inputs.backward && fuel > 0) {
         fuel -= 0.10;
     } else {
-        fuel -= 0.02; // Idle engine baseline depletion
+        fuel -= 0.02; // Baseline depletion
     }
     if (fuel <= 0) fuel = 0;
 
-    // Apply Standard Gravity Forces onto center of mass axis parameters
+    // Apply Standard Gravity Forces
     vehicle.vy += mapConfig.gravity * carConfig.mass;
 
-    // Determine current track anchoring constraints equations
     let groundY = getTerrainHeight(vehicle.x);
     let surfaceSlope = getTerrainSlopeAngle(vehicle.x);
     let isGrounded = vehicle.y >= groundY - carConfig.height;
 
     if (isGrounded) {
-        // Force clamp object coordinates directly safely resting over track plane boundary points
+        // Safe lock on ground surface profile point boundaries
         vehicle.y = groundY - carConfig.height;
         vehicle.vy = 0;
 
-        // Match chassis plane inclination values directly back against road layout profiles
+        // Match chassis rotation to the road normal profile tangent
         let targetAngle = surfaceSlope;
         let deltaAngle = targetAngle - vehicle.angle;
-        deltaAngle = Math.atan2(Math.sin(deltaAngle), Math.cos(deltaAngle)); // Normalize rotation values
+        deltaAngle = Math.atan2(Math.sin(deltaAngle), Math.cos(deltaAngle)); 
         vehicle.angle += deltaAngle * 0.25;
         vehicle.angularVelocity = 0;
 
-        // --- Advanced Vector Motion Projections Pipeline ---
-        // Project force factors directly along the road normal vector profile contours safely
+        // --- Linear Surface Projections Pipeline (Fixes rotation lock) ---
         if (fuel > 0) {
             if (inputs.forward) {
                 vehicle.vx += Math.cos(surfaceSlope) * carConfig.torque;
                 vehicle.vy += Math.sin(surfaceSlope) * carConfig.torque;
             }
             if (inputs.backward) {
-                vehicle.vx -= Math.cos(surfaceSlope) * (carConfig.torque * 0.6); // Slightly capped reversing vectors
+                vehicle.vx -= Math.cos(surfaceSlope) * (carConfig.torque * 0.6); 
                 vehicle.vy -= Math.sin(surfaceSlope) * (carConfig.torque * 0.6);
             }
         }
         
-        // Systemic Surface Friction Drag Apply
+        // Dynamic Surface Friction Apply
         vehicle.vx *= 0.975;
     } else {
-        // Airborne Free Space Rotational Momentum Balancing Controls Engine
+        // Airborne Free Space Control Mechanics (Flips and pitch adjustments)
         if (inputs.forward) vehicle.angularVelocity += 0.006;
         if (inputs.backward) vehicle.angularVelocity -= 0.006;
 
         vehicle.angle += vehicle.angularVelocity;
         vehicle.angularVelocity *= 0.98;
 
-        // Atmospheric air resistance drag profiles
+        // Air drag application
         vehicle.vx *= 0.992;
         vehicle.vy *= 0.992;
     }
 
-    // Step current system velocity increments onward
+    // Step current system velocity values onward
     vehicle.x += vehicle.vx;
     vehicle.y += vehicle.vy;
 
-    // Boundary constraints prevention mechanics rules
     if (vehicle.x < 50) {
         vehicle.x = 50;
         vehicle.vx = 0;
     }
 
-    // Keep viewport camera centered tracking along forward vehicle travel progress lines
+    // Camera follow track pipeline lock
     cameraX = vehicle.x - 200;
 
-    // --- Collision & Token Intersection Math Pipeline ---
+    // --- Token Intersection Math Pipeline ---
     tokenAssets.forEach(token => {
         if (token.collected) return;
         let dx = vehicle.x - token.x;
@@ -176,7 +173,7 @@ function updateSimulationTick() {
     if (isGrounded && (normalizedRot > Math.PI * 0.40 && normalizedRot < Math.PI * 1.60)) {
         triggerEndscreen("DRIVER TRAUMA DETECTED");
     }
-    if (fuel <= 0 && Math.abs(vehicle.vx) < 0.05 && !isGrounded) {
+    if (fuel <= 0 && Math.abs(vehicle.vx) < 0.05 && isGrounded) {
         triggerEndscreen("FUEL STORES EXHAUSTED");
     }
 }
@@ -188,7 +185,7 @@ function drawCanvasScene() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Render atmospheric gradient skies layer panels
+    // Sky Background Panels
     let bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
     bgGrad.addColorStop(0, '#020617');
     bgGrad.addColorStop(1, '#0b0f19');
@@ -198,7 +195,7 @@ function drawCanvasScene() {
     ctx.save();
     ctx.translate(-cameraX, 0);
 
-    // Compile dynamic vector track profile lines
+    // Dynamic track profile line drawing sequence
     ctx.beginPath();
     ctx.moveTo(cameraX, canvas.height);
     for (let sx = cameraX; sx <= cameraX + canvas.width + 20; sx += 4) {
@@ -209,7 +206,6 @@ function drawCanvasScene() {
     ctx.fillStyle = mapConfig.groundFill;
     ctx.fill();
 
-    // High fidelity edge profile outline
     ctx.beginPath();
     for (let sx = cameraX; sx <= cameraX + canvas.width + 20; sx += 4) {
         if (sx === cameraX) ctx.moveTo(sx, getTerrainHeight(sx));
@@ -219,7 +215,7 @@ function drawCanvasScene() {
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // Draw active tokens arrays tracking metrics
+    // Render pickup items array
     tokenAssets.forEach(token => {
         if (token.collected) return;
         if (token.x < cameraX - 50 || token.x > cameraX + canvas.width + 50) return;
@@ -235,7 +231,7 @@ function drawCanvasScene() {
         }
     });
 
-    // --- Render Custom Vehicle Blueprints Models ---
+    // --- Render Custom Vehicle Models ---
     ctx.save();
     ctx.translate(vehicle.x, vehicle.y);
     ctx.rotate(vehicle.angle);
@@ -243,11 +239,9 @@ function drawCanvasScene() {
     ctx.fillStyle = carConfig.color;
     ctx.fillRect(-carConfig.length / 2, -carConfig.height, carConfig.length, carConfig.height);
 
-    // Structural visual cockpit cabins box overlays elements 
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(-4, -carConfig.height - 6, 16, 6);
 
-    // Render operational rolling wheel axles geometry meshes
     ctx.restore();
     drawWheelAsset(vehicle.x - carConfig.length/3, vehicle.y, carConfig.wheelRad);
     drawWheelAsset(vehicle.x + carConfig.length/3, vehicle.y, carConfig.wheelRad);
@@ -263,9 +257,16 @@ function drawWheelAsset(wx, wy, rad) {
     ctx.lineWidth = 2;
     ctx.fill();
     ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(wx, wy);
+    let rotationAngle = vehicle.x / 15;
+    ctx.lineTo(wx + Math.cos(rotationAngle) * rad, wy + Math.sin(rotationAngle) * rad);
+    ctx.strokeStyle = '#020617';
+    ctx.stroke();
 }
 
-// --- View Lifecycle Operations Binds Manager ---
+// --- View Lifecycle Handlers Binds ---
 function triggerEndscreen(msg) {
     gameState = 'GAMEOVER';
     document.getElementById('fail-reason').innerText = msg;
@@ -281,9 +282,9 @@ function fullResetParameters() {
     vehicle.x = 150; vehicle.y = 150;
     vehicle.vx = 0; vehicle.vy = 0;
     vehicle.angle = 0; vehicle.angularVelocity = 0;
-    fuel = 100; coins = 0; cameraX = 0;
+    fuel = 100; coins = 0; cameraX = 0; chunkMarkerX = 2000;
     tokenAssets = [];
-    generateTokens(0, 5000);
+    generateTokens(0, 3000);
     
     coinsVal.innerText = "0";
     distanceVal.innerText = "0m";
@@ -293,6 +294,13 @@ function fullResetParameters() {
 function loop() {
     if (gameState === 'PLAYING') {
         updateSimulationTick();
+        
+        // Infinite pipeline terrain procedural loader trigger
+        if (vehicle.x > chunkMarkerX - 1500) {
+            generateTokens(chunkMarkerX, 2000);
+            chunkMarkerX += 2000;
+        }
+
         distanceVal.innerText = `${Math.floor(vehicle.x / 10)}m`;
         fuelBar.style.width = `${fuel}%`;
         fuelTxt.innerText = `${Math.floor(fuel)}%`;
@@ -328,7 +336,7 @@ function exitToMenu() {
     menuOverlay.classList.remove('hidden');
 }
 
-// --- Global Structural Input Mappings Binds ---
+// --- Global Input Mappings Binds ---
 window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') inputs.forward = true;
     if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') inputs.backward = true;
@@ -338,7 +346,7 @@ window.addEventListener('keyup', (e) => {
     if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') inputs.backward = false;
 });
 
-// Touch controls bindings routing
+// Touch control hardware routing overrides
 document.getElementById('ctrl-gas').addEventListener('touchstart', (e) => { e.preventDefault(); inputs.forward = true; });
 document.getElementById('ctrl-gas').addEventListener('touchend', (e) => { e.preventDefault(); inputs.forward = false; });
 document.getElementById('ctrl-brake').addEventListener('touchstart', (e) => { e.preventDefault(); inputs.backward = true; });
@@ -361,9 +369,7 @@ document.getElementById('restart-btn').addEventListener('click', () => {
 });
 
 document.getElementById('hud-back-btn').addEventListener('click', exitToMenu);
-document.getElementById('go-back-menu-btn')?.addEventListener('click', exitToMenu);
 document.getElementById('menu-back-btn').addEventListener('click', exitToMenu);
 
 setupSelectionCarousels();
-init();
 requestAnimationFrame(loop);
