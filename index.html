@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Neon Climb Pro // 2D Physics Engine</title>
+    <title>Neon Bounce</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -14,119 +14,77 @@
         <canvas id="gameCanvas" width="800" height="450" class="block w-full h-full"></canvas>
 
         <div id="hud" class="absolute top-4 left-4 right-4 z-10 flex justify-between pointer-events-none hidden">
-            <div class="flex gap-3 pointer-events-auto">
-                <div class="bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-1.5 backdrop-blur-md flex items-center gap-2">
-                    <i class="fa-solid fa-flag-checkered text-cyan-400"></i>
-                    <div>
-                        <span class="text-[9px] text-slate-400 block uppercase tracking-wider">Distance</span>
-                        <span id="distance-val" class="text-sm font-bold text-cyan-400">0m</span>
-                    </div>
-                </div>
-                <div class="bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-1.5 backdrop-blur-md flex items-center gap-2">
-                    <i class="fa-solid fa-coins text-amber-400"></i>
-                    <div>
-                        <span class="text-[9px] text-slate-400 block uppercase tracking-wider">Coins</span>
-                        <span id="coins-val" class="text-sm font-bold text-amber-400">0</span>
-                    </div>
+            <div class="bg-slate-900/80 border border-slate-800 rounded-xl px-4 py-2 backdrop-blur-md pointer-events-auto flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-cyan-400"></i>
+                <div>
+                    <span class="text-[9px] text-slate-400 block uppercase tracking-wider">Score</span>
+                    <span id="score-val" class="text-sm font-bold text-cyan-400">0</span>
                 </div>
             </div>
-
-            <button id="hud-back-btn" class="bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-xl px-4 py-1.5 text-xs font-bold pointer-events-auto active:scale-95 transition-all cursor-pointer">
-                LEAVE GAME
-            </button>
             
-            <div class="bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-1.5 backdrop-blur-md flex flex-col justify-center w-32">
-                <div class="flex justify-between text-[9px] text-slate-400 uppercase tracking-wider mb-1">
-                    <span>Fuel</span>
-                    <span id="fuel-txt" class="text-emerald-400 font-bold">100%</span>
-                </div>
-                <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
-                    <div id="fuel-bar" class="bg-emerald-500 h-full transition-all duration-700" style="width: 100%;"></div>
-                </div>
-            </div>
+            <button id="hud-leave-btn" class="bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-xl px-4 py-1.5 text-xs font-bold pointer-events-auto active:scale-95 transition-all cursor-pointer">
+                LEAVE SESSION
+            </button>
         </div>
 
-        <div id="menu-overlay" class="absolute inset-0 z-20 bg-slate-950/95 flex flex-col items-center justify-start p-6 overflow-y-auto">
-            <h1 class="text-3xl font-black bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent mb-1 tracking-tight mt-2">NEON CLIMB RACER PRO</h1>
-            <p class="text-[11px] text-slate-400 mb-6 text-center max-w-sm">Select your hardware configuration and terrain mesh blueprint profile below.</p>
+        <div id="menu-overlay" class="absolute inset-0 z-20 bg-slate-950/95 flex flex-col items-center justify-center p-6 overflow-y-auto">
+            <h1 class="text-3xl font-black bg-gradient-to-r from-cyan-400 to-fuchsia-500 bg-clip-text text-transparent mb-1 tracking-tight">NEON EDGE PLATFORMER</h1>
+            <p class="text-[11px] text-slate-400 mb-6 text-center max-w-sm">Calibrate matrix cosmetics and stage physics modules below before deployment.</p>
             
-            <div class="w-full max-w-xl space-y-4">
+            <div class="w-full max-w-md space-y-4 text-left">
                 <div>
-                    <span class="text-xs font-bold text-slate-400 block uppercase tracking-widest mb-2"><i class="fa-solid fa-car-side mr-1 text-cyan-400"></i> 1. Choose Blueprint Vehicle</span>
-                    <div class="grid grid-cols-3 gap-3">
-                        <button id="car-btn-0" class="car-opt active border border-cyan-500 bg-slate-900/50 p-2.5 rounded-xl text-left transition-all cursor-pointer">
-                            <span class="text-xs font-bold block text-cyan-400">Cyber Beetle</span>
-                            <span class="text-[9px] text-slate-500 block leading-tight mt-0.5">Balanced chassis frame suspension.</span>
-                        </button>
-                        <button id="car-btn-1" class="car-opt border border-slate-800 bg-slate-900/50 p-2.5 rounded-xl text-left transition-all cursor-pointer">
-                            <span class="text-xs font-bold block text-slate-300">Plasma Truck</span>
-                            <span class="text-[9px] text-slate-500 block leading-tight mt-0.5">Heavy tires, massive traction grip profile.</span>
-                        </button>
-                        <button id="car-btn-2" class="car-opt border border-slate-800 bg-slate-900/50 p-2.5 rounded-xl text-left transition-all cursor-pointer">
-                            <span class="text-xs font-bold block text-slate-300">Grid Bike</span>
-                            <span class="text-[9px] text-slate-500 block leading-tight mt-0.5">Ultra lightweight agile stunt frame.</span>
-                        </button>
+                    <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-widest mb-1.5">1. Player Avatar Skin Matrix</span>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button id="skin-0" class="skin-opt active border border-cyan-500 bg-slate-900 p-2 rounded-xl text-xs font-bold text-cyan-400 cursor-pointer">Cyan Glow</button>
+                        <button id="skin-1" class="skin-opt border border-slate-800 bg-slate-900 p-2 rounded-xl text-xs font-bold text-slate-400 cursor-pointer">Hot Pink</button>
+                        <button id="skin-2" class="skin-opt border border-slate-800 bg-slate-900 p-2 rounded-xl text-xs font-bold text-slate-400 cursor-pointer">Gold Matrix</button>
                     </div>
                 </div>
 
                 <div>
-                    <span class="text-xs font-bold text-slate-400 block uppercase tracking-widest mb-2"><i class="fa-solid fa-mountain mr-1 text-indigo-400"></i> 2. Select Map Biome Track</span>
-                    <div class="grid grid-cols-3 gap-3">
-                        <button id="map-btn-0" class="map-opt active border border-indigo-500 bg-slate-900/50 p-2.5 rounded-xl text-left transition-all cursor-pointer">
-                            <span class="text-xs font-bold block text-indigo-400">City Highway</span>
-                            <span class="text-[9px] text-slate-500 block leading-tight mt-0.5">Smooth, flat, low gradient incline hills.</span>
-                        </button>
-                        <button id="map-btn-1" class="map-opt border border-slate-800 bg-slate-900/50 p-2.5 rounded-xl text-left transition-all cursor-pointer">
-                            <span class="text-xs font-bold block text-slate-300">Neon Dunes</span>
-                            <span class="text-[9px] text-slate-500 block leading-tight mt-0.5">Rolling smooth sandy waves jumps.</span>
-                        </button>
-                        <button id="map-btn-2" class="map-opt border border-slate-800 bg-slate-900/50 p-2.5 rounded-xl text-left transition-all cursor-pointer">
-                            <span class="text-xs font-bold block text-slate-300">Lunar Crates</span>
-                            <span class="text-[9px] text-slate-500 block leading-tight mt-0.5">Low gravity space craggy step drops.</span>
-                        </button>
+                    <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-widest mb-1.5">2. Level Core Environment Theme</span>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button id="theme-0" class="theme-opt active border border-fuchsia-500 bg-slate-900 p-2 rounded-xl text-xs font-bold text-fuchsia-400 cursor-pointer">Cyber City</button>
+                        <button id="theme-1" class="theme-opt border border-slate-800 bg-slate-900 p-2 rounded-xl text-xs font-bold text-slate-400 cursor-pointer">Acid Void</button>
+                        <button id="theme-2" class="theme-opt border border-slate-800 bg-slate-900 p-2 rounded-xl text-xs font-bold text-slate-400 cursor-pointer">Deep Cosmos</button>
                     </div>
                 </div>
             </div>
 
-            <button id="start-btn" class="w-full max-w-xs py-3.5 mt-8 bg-gradient-to-r from-cyan-500 to-indigo-600 text-slate-950 font-bold rounded-xl shadow-lg shadow-cyan-500/10 hover:scale-105 transition-all active:scale-95 cursor-pointer">
-                INITIALIZE SIMULATION RUN
+            <button id="start-btn" class="w-full max-w-xs py-3.5 mt-8 bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-slate-950 font-bold rounded-xl shadow-lg shadow-cyan-500/10 hover:scale-105 transition-all cursor-pointer">
+                LAUNCH DEPLOYMENT RUN
             </button>
         </div>
 
         <div id="gameover-overlay" class="absolute inset-0 z-20 bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center hidden">
-            <h2 id="fail-reason" class="text-2xl font-bold text-rose-500 mb-1 tracking-wider">CRASH DETECTED</h2>
-            <p class="text-xs text-slate-400 mb-6">Simulation parameters flatlined.</p>
+            <h2 id="end-title" class="text-3xl font-black text-rose-500 mb-1 tracking-wider">SYSTEM INTEGRITY FRACTURED</h2>
+            <p id="end-desc" class="text-xs text-slate-400 mb-6">Avatar coordinates vanished out of loop boundaries.</p>
             
-            <div class="bg-slate-900 border border-slate-800 rounded-xl px-6 py-4 mb-6 w-full max-w-xs space-y-2">
-                <div class="flex justify-between text-xs text-slate-400">Distance Travelled: <span id="final-distance" class="font-bold text-slate-100">0m</span></div>
-                <div class="flex justify-between text-xs text-slate-400">Total Coins: <span id="final-coins" class="font-bold text-slate-100">0</span></div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl px-6 py-3 mb-6 w-full max-w-xs flex justify-between text-xs text-slate-400">
+                <span>Final Output Score:</span> <span id="final-score" class="font-bold text-slate-100">0</span>
             </div>
 
             <div class="flex flex-col gap-2 w-full max-w-xs">
-                <button id="restart-btn" class="w-full py-3 bg-slate-100 text-slate-950 font-bold rounded-xl shadow-lg hover:scale-105 transition-all cursor-pointer">
-                    RELOAD RUN
+                <button id="restart-btn" class="w-full py-3.5 bg-slate-100 text-slate-950 font-bold rounded-xl shadow-lg hover:scale-105 transition-all cursor-pointer">
+                    RELOAD RUNTIME INSTANCE
                 </button>
                 <button id="menu-back-btn" class="w-full py-2 bg-slate-900 border border-slate-800 text-slate-400 text-xs rounded-xl hover:text-slate-200 transition-all cursor-pointer">
-                    RETURN TO SETUP OPTIONS
+                    RETURN TO SELECTION CONFIGS
                 </button>
             </div>
         </div>
 
         <div id="mobile-controls" class="absolute bottom-4 left-4 right-4 z-10 flex justify-between pointer-events-none md:hidden hidden">
-            <button id="ctrl-brake" class="w-20 h-20 rounded-2xl border border-slate-800 bg-slate-900/70 backdrop-blur-md pointer-events-auto flex flex-col items-center justify-center text-slate-400 active:text-rose-400 active:bg-rose-500/10 transition-all select-none">
-                <i class="fa-solid fa-backward text-lg mb-1"></i>
-                <span class="text-[8px] uppercase font-bold">REVERSE / LEAN L</span>
-            </button>
-            <button id="ctrl-gas" class="w-20 h-20 rounded-2xl border border-slate-800 bg-slate-900/70 backdrop-blur-md pointer-events-auto flex flex-col items-center justify-center text-slate-400 active:text-emerald-400 active:bg-emerald-500/10 transition-all select-none">
-                <i class="fa-solid fa-forward text-lg mb-1"></i>
-                <span class="text-[8px] uppercase font-bold">FORWARD / LEAN R</span>
-            </button>
+            <div class="flex gap-2">
+                <button id="btn-left" class="w-14 h-14 rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md pointer-events-auto flex items-center justify-center text-slate-400 active:text-cyan-400 active:bg-cyan-500/10 active:scale-90 transition-all select-none"><i class="fa-solid fa-arrow-left text-lg"></i></button>
+                <button id="btn-right" class="w-14 h-14 rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md pointer-events-auto flex items-center justify-center text-slate-400 active:text-cyan-400 active:bg-cyan-500/10 active:scale-90 transition-all select-none"><i class="fa-solid fa-arrow-right text-lg"></i></button>
+            </div>
+            <button id="btn-jump" class="w-16 h-14 rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md pointer-events-auto flex flex-col items-center justify-center text-slate-400 active:text-fuchsia-400 active:bg-fuchsia-500/10 active:scale-90 transition-all select-none"><i class="fa-solid fa-angles-up text-base"></i><span class="text-[8px] font-bold mt-0.5">JUMP</span></button>
         </div>
     </div>
 
     <div class="mt-4 text-center text-[11px] text-slate-500 hidden md:block">
-        Hold <span class="bg-slate-900 px-1.5 py-0.5 border border-slate-800 rounded text-slate-400 font-mono">→ / D</span> for Throttle/Lean Right, and 
-        <span class="bg-slate-900 px-1.5 py-0.5 border border-slate-800 rounded text-slate-400 font-mono">← / A</span> for Brake/Lean Left.
+        Use <span class="bg-slate-900 px-1.5 py-0.5 border border-slate-800 rounded text-slate-400 font-mono">← / A</span> and <span class="bg-slate-900 px-1.5 py-0.5 border border-slate-800 rounded text-slate-400 font-mono">→ / D</span> to move. Tap <span class="bg-slate-900 px-1.5 py-0.5 border border-slate-800 rounded text-slate-400 font-mono">Space / W / ↑</span> to trigger jumps.
     </div>
 
     <script src="game.js"></script>
