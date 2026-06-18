@@ -1,334 +1,318 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// DOM Selection Anchors
+// DOM Target Anchors Selectors Binds
 const menuOverlay = document.getElementById('menu-overlay');
 const gameoverOverlay = document.getElementById('gameover-overlay');
 const hud = document.getElementById('hud');
 const mobileControls = document.getElementById('mobile-controls');
-const distanceVal = document.getElementById('distance-val');
-const coinsVal = document.getElementById('coins-val');
-const fuelBar = document.getElementById('fuel-bar');
-const fuelTxt = document.getElementById('fuel-txt');
+const scoreVal = document.getElementById('score-val');
 
-// --- Hardware Blueprints Options Profiles ---
-const VEHICLES = [
-    { name: "Cyber Beetle", mass: 1.0, torque: 0.22, length: 60, height: 20, wheelRad: 11, color: "#06b6d4" },
-    { name: "Plasma Truck", mass: 1.4, torque: 0.32, length: 70, height: 26, wheelRad: 15, color: "#a855f7" },
-    { name: "Grid Bike",    mass: 0.7, torque: 0.18, length: 45, height: 16, wheelRad: 9,  color: "#f43f5e" }
+// --- Component Option Skin Matrix Profiles ---
+const SKINS = ["#06b6d4", "#f43f5e", "#fbbf24"];
+const THEMES = [
+    { name: "Cyber City", bgTop: "#020617", bgBot: "#0f172a", platformColor: "#1e293b", strokeColor: "#f43f5e" },
+    { name: "Acid Void",   bgTop: "#050505", bgBot: "#022c22", platformColor: "#064e3b", strokeColor: "#10b981" },
+    { name: "Deep Cosmos", bgTop: "#1e1b4b", bgBot: "#030712", platformColor: "#312e81", strokeColor: "#818cf8" }
 ];
 
-const BIOMES = [
-    { name: "City Highway", gravity: 0.20, smoothness: 0.002, amplitude: 50,  lineColor: "#06b6d4", groundFill: "#1e293b" },
-    { name: "Neon Dunes",   gravity: 0.22, smoothness: 0.005, amplitude: 100, lineColor: "#f59e0b", groundFill: "#1c1917" },
-    { name: "Lunar Crates", gravity: 0.09, smoothness: 0.008, amplitude: 130, lineColor: "#a855f7", groundFill: "#1e1b4b" }
-];
-
-// App Configurations Indices
-let selectedCarIdx = 0;
-let selectedMapIdx = 0;
+let selectedSkinIdx = 0;
+let selectedThemeIdx = 0;
 
 let gameState = 'MENU';
-let coins = 0;
-let fuel = 100;
+let score = 0;
 let cameraX = 0;
 
-// Central Rigid Body Configuration Object Structure
-let vehicle = {
-    x: 200, y: 150,
-    vx: 0, vy: 0,
-    angle: 0, angularVelocity: 0
+// Engine Configuration Physics Parameters
+const PHYSICS = {
+    gravity: 0.5,
+    friction: 0.85,
+    speed: 4.5,
+    jumpForce: -11.5
 };
 
-let inputs = { forward: false, backward: false };
-let tokenAssets = [];
-let chunkMarkerX = 2000;
+// Player Dynamic Body State Object
+let player = {
+    x: 100, y: 200,
+    w: 20, h: 32,
+    vx: 0, vy: 0,
+    grounded: false
+};
 
-// --- Smooth Procedural Map Terrain Math Pipeline ---
-function getTerrainHeight(x) {
-    if (x < 300) return 300; // Flat safety initialization launchpad
+// Level Interactive Structural Entities Matrix
+let mapPlatforms = [];
+let interactiveMechanics = []; // Tokens, spikes, bounce pads, portals
+let activeMovingPlatforms = [];
 
-    const biome = BIOMES[selectedMapIdx];
-    
-    // Layered harmonic curves generate perfectly rolling, smooth terrain
-    let layer1 = Math.sin(x * biome.smoothness) * biome.amplitude;
-    let layer2 = Math.cos(x * biome.smoothness * 0.4) * (biome.amplitude * 0.5);
-    let layer3 = Math.sin(x * biome.smoothness * 2.5) * 8; 
+let inputs = { left: false, right: false, jump: false };
 
-    return 350 - (layer1 + layer2 + layer3);
-}
+// --- Structural Map Blueprint Generator ---
+function buildStageArchitecture() {
+    mapPlatforms = [
+        { x: 0, y: 400, w: 500, h: 50 },
+        { x: 580, y: 340, w: 200, h: 20 },
+        { x: 850, y: 280, w: 180, h: 20 },
+        { x: 1100, y: 400, w: 400, h: 50 },
+        { x: 1600, y: 330, w: 220, h: 20 },
+        { x: 1900, y: 240, w: 150, h: 20 },
+        { x: 2150, y: 400, w: 600, h: 50 } // Goal Line Arena Platform
+    ];
 
-// Extract surface slope angle to project directional motion vectors along the ground tangent
-function getTerrainSlopeAngle(x) {
-    let step = 2;
-    let y1 = getTerrainHeight(x - step);
-    let y2 = getTerrainHeight(x + step);
-    return Math.atan2(y2 - y1, step * 2);
-}
+    activeMovingPlatforms = [
+        { x: 380, y: 240, startY: 240, endY: 380, w: 100, h: 15, speed: 1.5, dir: 1 },
+        { x: 1380, y: 340, startX: 1380, endX: 1580, w: 90, h: 15, speed: 2, dir: 1 }
+    ];
 
-function generateTokens(start, length) {
-    for (let x = start; x < start + length; x += 150) {
-        let groundY = getTerrainHeight(x);
-        if (Math.random() < 0.40) {
-            tokenAssets.push({ type: 'COIN', x: x, y: groundY - 35, collected: false });
-        } else if (Math.random() < 0.08) {
-            tokenAssets.push({ type: 'FUEL', x: x, y: groundY - 45, collected: false });
-        }
-    }
-}
+    interactiveMechanics = [
+        // Star score collectible targets tokens
+        { type: 'COIN', x: 220, y: 360, w: 12, h: 12, gathered: false },
+        { type: 'COIN', x: 680, y: 300, w: 12, h: 12, gathered: false },
+        { type: 'COIN', x: 920, y: 230, w: 12, h: 12, gathered: false },
+        { type: 'COIN', x: 1250, y: 360, w: 12, h: 12, gathered: false },
+        { type: 'COIN', x: 1700, y: 280, w: 12, h: 12, gathered: false },
 
-// --- Dynamic Physics Vector Execution Engine Loop ---
-function updateSimulationTick() {
-    const carConfig = VEHICLES[selectedCarIdx];
-    const mapConfig = BIOMES[selectedMapIdx];
-
-    // Core Acceleration and Fuel Management Systems
-    if (inputs.forward && fuel > 0) {
-        fuel -= 0.15;
-    } else if (inputs.backward && fuel > 0) {
-        fuel -= 0.10;
-    } else {
-        fuel -= 0.02; // Baseline depletion
-    }
-    if (fuel <= 0) fuel = 0;
-
-    // Apply Standard Gravity Forces
-    vehicle.vy += mapConfig.gravity * carConfig.mass;
-
-    let groundY = getTerrainHeight(vehicle.x);
-    let surfaceSlope = getTerrainSlopeAngle(vehicle.x);
-    let isGrounded = vehicle.y >= groundY - carConfig.height;
-
-    if (isGrounded) {
-        // Safe lock on ground surface profile point boundaries
-        vehicle.y = groundY - carConfig.height;
-        vehicle.vy = 0;
-
-        // Match chassis rotation to the road normal profile tangent
-        let targetAngle = surfaceSlope;
-        let deltaAngle = targetAngle - vehicle.angle;
-        deltaAngle = Math.atan2(Math.sin(deltaAngle), Math.cos(deltaAngle)); 
-        vehicle.angle += deltaAngle * 0.25;
-        vehicle.angularVelocity = 0;
-
-        // --- Linear Surface Projections Pipeline (Fixes rotation lock) ---
-        if (fuel > 0) {
-            if (inputs.forward) {
-                vehicle.vx += Math.cos(surfaceSlope) * carConfig.torque;
-                vehicle.vy += Math.sin(surfaceSlope) * carConfig.torque;
-            }
-            if (inputs.backward) {
-                vehicle.vx -= Math.cos(surfaceSlope) * (carConfig.torque * 0.6); 
-                vehicle.vy -= Math.sin(surfaceSlope) * (carConfig.torque * 0.6);
-            }
-        }
+        // Hyper High-Velocity Bounce Pad Springs
+        { type: 'BOUNCE', x: 1150, y: 385, w: 24, h: 15 },
         
-        // Dynamic Surface Friction Apply
-        vehicle.vx *= 0.975;
-    } else {
-        // Airborne Free Space Control Mechanics (Flips and pitch adjustments)
-        if (inputs.forward) vehicle.angularVelocity += 0.006;
-        if (inputs.backward) vehicle.angularVelocity -= 0.006;
+        // Hazard Death Spikes Meshes
+        { type: 'SPIKE', x: 1280, y: 385, w: 30, h: 15 },
+        { x: 1310, y: 385, w: 30, h: 15 },
 
-        vehicle.angle += vehicle.angularVelocity;
-        vehicle.angularVelocity *= 0.98;
+        // Level Exit End Gate Teleporter Portal
+        { type: 'PORTAL', x: 2600, y: 320, w: 30, h: 80 }
+    ];
+}
 
-        // Air drag application
-        vehicle.vx *= 0.992;
-        vehicle.vy *= 0.992;
-    }
+// --- Platformer Physics Engine AABB Intersection Pipelines ---
+function updatePhysicsSimulation() {
+    // Process Left/Right Inertia Math Vectoring
+    if (inputs.left)  player.vx = -PHYSICS.speed;
+    if (inputs.right) player.vx = PHYSICS.speed;
+    if (!inputs.left && !inputs.right) player.vx *= PHYSICS.friction;
 
-    // Step current system velocity values onward
-    vehicle.x += vehicle.vx;
-    vehicle.y += vehicle.vy;
+    // Apply Standard Gravitational Accel Constant
+    player.vy += PHYSICS.gravity;
 
-    if (vehicle.x < 50) {
-        vehicle.x = 50;
-        vehicle.vx = 0;
-    }
+    // Transition coordinate boundaries steps updates
+    player.x += player.vx;
+    
+    // Evaluate Horizontal Platform Collisions
+    player.grounded = false;
+    processPlatformCollisions('HORIZONTAL');
 
-    // Camera follow track pipeline lock
-    cameraX = vehicle.x - 200;
+    player.y += player.vy;
+    // Evaluate Vertical Platform Collisions
+    processPlatformCollisions('VERTICAL');
 
-    // --- Token Intersection Math Pipeline ---
-    tokenAssets.forEach(token => {
-        if (token.collected) return;
-        let dx = vehicle.x - token.x;
-        let dy = (vehicle.y + carConfig.height/2) - token.y;
-        let d = Math.sqrt(dx * dx + dy * dy);
+    // Run Moving Platforms Physics Loop Updates
+    activeMovingPlatforms.forEach(mp => {
+        // Handle physical spatial translations along designated structural track paths
+        if (mp.startX !== undefined) {
+            mp.x += mp.speed * mp.dir;
+            if (mp.x > mp.endX || mp.x < mp.startX) mp.dir *= -1;
+        } else {
+            mp.y += mp.speed * mp.dir;
+            if (mp.y > mp.endY || mp.y < mp.startY) mp.dir *= -1;
+        }
 
-        if (d < carConfig.length * 0.6) {
-            token.collected = true;
-            if (token.type === 'COIN') {
-                coins += 1;
-                coinsVal.innerText = coins.toString();
-            } else if (token.type === 'FUEL') {
-                fuel = Math.min(100, fuel + 40);
+        // Rider dynamic friction attachments pipeline connection calculations 
+        if (player.x + player.w > mp.x && player.x < mp.x + mp.w) {
+            // Player standing flush directly over moving platform frame boundaries
+            if (player.y + player.h >= mp.y && player.y + player.h <= mp.y + mp.speed + 6 && player.vy >= 0) {
+                player.y = mp.y - player.h;
+                player.vy = 0;
+                player.grounded = true;
+                if (mp.startX !== undefined) player.x += mp.speed * mp.dir; // Pull passenger horizontally
             }
         }
     });
 
-    // --- Death and Flipped Verification Loops System ---
-    let normalizedRot = Math.abs(vehicle.angle) % (Math.PI * 2);
-    if (isGrounded && (normalizedRot > Math.PI * 0.40 && normalizedRot < Math.PI * 1.60)) {
-        triggerEndscreen("DRIVER TRAUMA DETECTED");
+    // Handle Jump Commands Action Triggers
+    if (inputs.jump && player.grounded) {
+        player.vy = PHYSICS.jumpForce;
+        player.grounded = false;
     }
-    if (fuel <= 0 && Math.abs(vehicle.vx) < 0.05 && isGrounded) {
-        triggerEndscreen("FUEL STORES EXHAUSTED");
+
+    // Anchor camera horizontal window viewport offset point smoothly tracking player positions
+    cameraX = player.x - 250;
+    if (cameraX < 0) cameraX = 0;
+
+    // Evaluate Interactive Objects Collision Intersection Nodes
+    interactiveMechanics.forEach(item => {
+        if (player.x < item.x + item.w && player.x + player.w > item.x &&
+            player.y < item.y + item.h && player.y + player.h > item.y) {
+            
+            if (item.type === 'COIN' && !item.gathered) {
+                item.gathered = true;
+                score += 100;
+                scoreVal.innerText = score.toString();
+            } else if (item.type === 'BOUNCE') {
+                player.vy = PHYSICS.jumpForce * 1.45; // Blast passenger into space
+            } else if (item.type === 'SPIKE') {
+                triggerSimulationEnd('CRASHED');
+            } else if (item.type === 'PORTAL') {
+                triggerSimulationEnd('CLEARED');
+            }
+        }
+    });
+
+    // Out of bounds drop fall boundary checker triggers
+    if (player.y > canvas.height + 100) {
+        triggerSimulationEnd('CRASHED');
     }
 }
 
-// --- Graphical Render Engine Module ---
-function drawCanvasScene() {
-    const carConfig = VEHICLES[selectedCarIdx];
-    const mapConfig = BIOMES[selectedMapIdx];
+function processPlatformCollisions(axis) {
+    // Combine standard static blocks lists and moving arrays sets to run clean overlap iterations
+    const targets = [...mapPlatforms, ...activeMovingPlatforms];
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    targets.forEach(plat => {
+        if (player.x < plat.x + plat.w && player.x + player.w > plat.x &&
+            player.y < plat.y + plat.h && player.y + player.h > plat.y) {
+            
+            if (axis === 'HORIZONTAL') {
+                if (player.vx > 0) player.x = plat.x - player.w;
+                if (player.vx < 0) player.x = plat.x + plat.w;
+            } else {
+                if (player.vy > 0) {
+                    player.y = plat.y - player.h;
+                    player.vy = 0;
+                    player.grounded = true;
+                }
+                if (player.vy < 0) {
+                    player.y = plat.y + plat.h;
+                    player.vy = 0;
+                }
+            }
+        }
+    });
+}
 
-    // Sky Background Panels
-    let bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    bgGrad.addColorStop(0, '#020617');
-    bgGrad.addColorStop(1, '#0b0f19');
-    ctx.fillStyle = bgGrad;
+// --- Graphical Canvas Matrix Rendering Pipeline ---
+function renderFrameOutput() {
+    const theme = THEMES[selectedThemeIdx];
+
+    // Compute sky background vector gradients textures blocks
+    let bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    bg.addColorStop(0, theme.bgTop);
+    bgGrad = theme.bgBot;
+    bg.addColorStop(1, theme.bgBot);
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
     ctx.translate(-cameraX, 0);
 
-    // Dynamic track profile line drawing sequence
-    ctx.beginPath();
-    ctx.moveTo(cameraX, canvas.height);
-    for (let sx = cameraX; sx <= cameraX + canvas.width + 20; sx += 4) {
-        ctx.lineTo(sx, getTerrainHeight(sx));
-    }
-    ctx.lineTo(cameraX + canvas.width + 20, canvas.height);
-    ctx.closePath();
-    ctx.fillStyle = mapConfig.groundFill;
-    ctx.fill();
+    // Draw Static Solid Level Architecture Elements Block Matrices
+    ctx.fillStyle = theme.platformColor;
+    mapPlatforms.forEach(plat => {
+        ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+        ctx.strokeStyle = theme.strokeColor;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(plat.x, plat.y, plat.w, plat.h);
+    });
 
-    ctx.beginPath();
-    for (let sx = cameraX; sx <= cameraX + canvas.width + 20; sx += 4) {
-        if (sx === cameraX) ctx.moveTo(sx, getTerrainHeight(sx));
-        else ctx.lineTo(sx, getTerrainHeight(sx));
-    }
-    ctx.strokeStyle = mapConfig.lineColor;
-    ctx.lineWidth = 3;
-    ctx.stroke();
+    // Draw Moving Platforms Frame Sets
+    ctx.fillStyle = "#475569";
+    activeMovingPlatforms.forEach(mp => {
+        ctx.fillRect(mp.x, mp.y, mp.w, mp.h);
+        ctx.strokeStyle = "#94a3b8";
+        ctx.strokeRect(mp.x, mp.y, mp.w, mp.h);
+    });
 
-    // Render pickup items array
-    tokenAssets.forEach(token => {
-        if (token.collected) return;
-        if (token.x < cameraX - 50 || token.x > cameraX + canvas.width + 50) return;
-
-        if (token.type === 'COIN') {
+    // Draw Operational Level Interactive Sprites Assets
+    interactiveMechanics.forEach(item => {
+        if (item.type === 'COIN' && !item.gathered) {
+            ctx.fillStyle = "#fbbf24";
+            ctx.fillRect(item.x, item.y, item.w, item.h);
+        } else if (item.type === 'BOUNCE') {
+            ctx.fillStyle = "#a855f7";
+            ctx.fillRect(item.x, item.y, item.w, item.h);
+        } else if (item.type === 'SPIKE') {
+            ctx.fillStyle = "#ef4444";
             ctx.beginPath();
-            ctx.arc(token.x, token.y, 8, 0, Math.PI * 2);
-            ctx.fillStyle = '#fbbf24';
+            ctx.moveTo(item.x, item.y + item.h);
+            ctx.lineTo(item.x + item.w/2, item.y);
+            ctx.lineTo(item.x + item.w, item.y + item.h);
+            ctx.closePath();
             ctx.fill();
-        } else {
-            ctx.fillStyle = '#ef4444';
-            ctx.fillRect(token.x - 7, token.y - 10, 14, 20);
+        } else if (item.type === 'PORTAL') {
+            // Render neon translucent destination portal layer loop shapes 
+            let portGrad = ctx.createLinearGradient(item.x, item.y, item.x + item.w, item.y);
+            portGrad.addColorStop(0, "rgba(236, 72, 153, 0.2)");
+            portGrad.addColorStop(1, "rgba(168, 85, 247, 0.8)");
+            ctx.fillStyle = portGrad;
+            ctx.fillRect(item.x, item.y, item.w, item.h);
+            ctx.strokeStyle = "#f43f5e";
+            ctx.strokeRect(item.x, item.y, item.w, item.h);
         }
     });
 
-    // --- Render Custom Vehicle Models ---
-    ctx.save();
-    ctx.translate(vehicle.x, vehicle.y);
-    ctx.rotate(vehicle.angle);
-
-    ctx.fillStyle = carConfig.color;
-    ctx.fillRect(-carConfig.length / 2, -carConfig.height, carConfig.length, carConfig.height);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(-4, -carConfig.height - 6, 16, 6);
-
-    ctx.restore();
-    drawWheelAsset(vehicle.x - carConfig.length/3, vehicle.y, carConfig.wheelRad);
-    drawWheelAsset(vehicle.x + carConfig.length/3, vehicle.y, carConfig.wheelRad);
+    // Draw Player Rig Box Model Sprite Profile Frame
+    ctx.fillStyle = SKINS[selectedSkinIdx];
+    ctx.fillRect(player.x, player.y, player.w, player.h);
 
     ctx.restore();
 }
 
-function drawWheelAsset(wx, wy, rad) {
-    ctx.beginPath();
-    ctx.arc(wx, wy, rad, 0, Math.PI * 2);
-    ctx.fillStyle = '#334155';
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.fill();
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.moveTo(wx, wy);
-    let rotationAngle = vehicle.x / 15;
-    ctx.lineTo(wx + Math.cos(rotationAngle) * rad, wy + Math.sin(rotationAngle) * rad);
-    ctx.strokeStyle = '#020617';
-    ctx.stroke();
-}
-
-// --- View Lifecycle Handlers Binds ---
-function triggerEndscreen(msg) {
+// --- View Lifecycle Navigation State Handlers ---
+function triggerSimulationEnd(status) {
     gameState = 'GAMEOVER';
-    document.getElementById('fail-reason').innerText = msg;
-    document.getElementById('final-distance').innerText = `${Math.floor(vehicle.x / 10)}m`;
-    document.getElementById('final-coins').innerText = coins.toString();
-
     hud.classList.add('hidden');
     mobileControls.classList.add('hidden');
+    
+    const endTitle = document.getElementById('end-title');
+    const endDesc = document.getElementById('end-desc');
+    document.getElementById('final-score').innerText = score.toString();
+
+    if (status === 'CLEARED') {
+        endTitle.innerText = "STAGE STACK CLEARED";
+        endTitle.className = "text-3xl font-black text-emerald-400 mb-1 tracking-wider";
+        endDesc.innerText = "System records successfully vaulted into secure matrix layers.";
+    } else {
+        endTitle.innerText = "INTEGRITY FRACTURED";
+        endTitle.className = "text-3xl font-black text-rose-500 mb-1 tracking-wider";
+        endDesc.innerText = "Avatar coordinates vanished outside operational framework structures.";
+    }
     gameoverOverlay.classList.remove('hidden');
 }
 
-function fullResetParameters() {
-    vehicle.x = 150; vehicle.y = 150;
-    vehicle.vx = 0; vehicle.vy = 0;
-    vehicle.angle = 0; vehicle.angularVelocity = 0;
-    fuel = 100; coins = 0; cameraX = 0; chunkMarkerX = 2000;
-    tokenAssets = [];
-    generateTokens(0, 3000);
-    
-    coinsVal.innerText = "0";
-    distanceVal.innerText = "0m";
-    fuelBar.style.width = "100%";
+function fullEngineParamReset() {
+    player.x = 80; player.y = 200;
+    player.vx = 0; player.vy = 0;
+    score = 0; cameraX = 0;
+    scoreVal.innerText = "0";
+    buildStageArchitecture();
 }
 
-function loop() {
+function engineMasterTick() {
     if (gameState === 'PLAYING') {
-        updateSimulationTick();
-        
-        // Infinite pipeline terrain procedural loader trigger
-        if (vehicle.x > chunkMarkerX - 1500) {
-            generateTokens(chunkMarkerX, 2000);
-            chunkMarkerX += 2000;
-        }
-
-        distanceVal.innerText = `${Math.floor(vehicle.x / 10)}m`;
-        fuelBar.style.width = `${fuel}%`;
-        fuelTxt.innerText = `${Math.floor(fuel)}%`;
+        updatePhysicsSimulation();
     }
-    drawCanvasScene();
-    requestAnimationFrame(loop);
+    renderFrameOutput();
+    requestAnimationFrame(engineMasterTick);
 }
 
-// --- Menu UI Selection Button Event Binds ---
-function setupSelectionCarousels() {
-    document.querySelectorAll('.car-opt').forEach((btn, idx) => {
+// --- Setup Selection Menu Multi-Buttons Matrix Loops ---
+function configureSelectionMatrices() {
+    document.querySelectorAll('.skin-opt').forEach((btn, idx) => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.car-opt').forEach(b => b.classList.remove('border-cyan-500', 'active'));
-            btn.classList.add('border-cyan-500', 'active');
-            selectedCarIdx = idx;
+            document.querySelectorAll('.skin-opt').forEach(b => b.classList.remove('border-cyan-500', 'text-cyan-400'));
+            btn.classList.add('border-cyan-500', 'text-cyan-400');
+            selectedSkinIdx = idx;
         });
     });
 
-    document.querySelectorAll('.map-opt').forEach((btn, idx) => {
+    document.querySelectorAll('.theme-opt').forEach((btn, idx) => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.map-opt').forEach(b => b.classList.remove('border-indigo-500', 'active'));
-            btn.classList.add('border-indigo-500', 'active');
-            selectedMapIdx = idx;
+            document.querySelectorAll('.theme-opt').forEach(b => b.classList.remove('border-fuchsia-500', 'text-fuchsia-400'));
+            btn.classList.add('border-fuchsia-500', 'text-fuchsia-400');
+            selectedThemeIdx = idx;
         });
     });
 }
 
-function exitToMenu() {
+function exitToMainSetup() {
     gameState = 'MENU';
     hud.classList.add('hidden');
     mobileControls.classList.add('hidden');
@@ -336,27 +320,32 @@ function exitToMenu() {
     menuOverlay.classList.remove('hidden');
 }
 
-// --- Global Input Mappings Binds ---
+// --- Structural Input Event Bindings Routing ---
 window.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') inputs.forward = true;
-    if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') inputs.backward = true;
-});
-window.addEventListener('keyup', (e) => {
-    if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') inputs.forward = false;
-    if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') inputs.backward = false;
+    if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') inputs.left = true;
+    if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') inputs.right = true;
+    if (e.key === ' ' || e.key.toLowerCase() === 'w' || e.key === 'ArrowUp') inputs.jump = true;
 });
 
-// Touch control hardware routing overrides
-document.getElementById('ctrl-gas').addEventListener('touchstart', (e) => { e.preventDefault(); inputs.forward = true; });
-document.getElementById('ctrl-gas').addEventListener('touchend', (e) => { e.preventDefault(); inputs.forward = false; });
-document.getElementById('ctrl-brake').addEventListener('touchstart', (e) => { e.preventDefault(); inputs.backward = true; });
-document.getElementById('ctrl-brake').addEventListener('touchend', (e) => { e.preventDefault(); inputs.backward = false; });
+window.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') inputs.left = false;
+    if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') inputs.right = false;
+    if (e.key === ' ' || e.key.toLowerCase() === 'w' || e.key === 'ArrowUp') inputs.jump = false;
+});
+
+// Mobile layout gesture maps overrides Binds
+document.getElementById('btn-left').addEventListener('touchstart', (e) => { e.preventDefault(); inputs.left = true; });
+document.getElementById('btn-left').addEventListener('touchend', (e) => { e.preventDefault(); inputs.left = false; });
+document.getElementById('btn-right').addEventListener('touchstart', (e) => { e.preventDefault(); inputs.right = true; });
+document.getElementById('btn-right').addEventListener('touchend', (e) => { e.preventDefault(); inputs.right = false; });
+document.getElementById('btn-jump').addEventListener('touchstart', (e) => { e.preventDefault(); inputs.jump = true; });
+document.getElementById('btn-jump').addEventListener('touchend', (e) => { e.preventDefault(); inputs.jump = false; });
 
 document.getElementById('start-btn').addEventListener('click', () => {
     menuOverlay.classList.add('hidden');
     hud.classList.remove('hidden');
     if (window.innerWidth < 768) mobileControls.classList.remove('hidden');
-    fullResetParameters();
+    fullEngineParamReset();
     gameState = 'PLAYING';
 });
 
@@ -364,12 +353,14 @@ document.getElementById('restart-btn').addEventListener('click', () => {
     gameoverOverlay.classList.add('hidden');
     hud.classList.remove('hidden');
     if (window.innerWidth < 768) mobileControls.classList.remove('hidden');
-    fullResetParameters();
+    fullEngineParamReset();
     gameState = 'PLAYING';
 });
 
-document.getElementById('hud-back-btn').addEventListener('click', exitToMenu);
-document.getElementById('menu-back-btn').addEventListener('click', exitToMenu);
+document.getElementById('hud-leave-btn').addEventListener('click', exitToMainSetup);
+document.getElementById('menu-back-btn').addEventListener('click', exitToMainSetup);
 
-setupSelectionCarousels();
-requestAnimationFrame(loop);
+// Bootstrap engine loop runtime initialization sequences
+configureSelectionMatrices();
+buildStageArchitecture();
+requestAnimationFrame(engineMasterTick);
