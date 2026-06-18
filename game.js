@@ -1,343 +1,426 @@
-// --- Game Engine Variables Setup ---
-let scene, camera, renderer;
-let gameState = 'MENU';
-let score = 0;
-let speed = 0.8;
-const LANE_WIDTH = 4.0; // Slightly widened for cleaner tracking clearance
-const LANES = [-LANE_WIDTH, 0, LANE_WIDTH];
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-let playerCar;
-let playerLane = 1; // Center Lane
-let targetX = LANES[playerLane];
-let selectedCarType = 0; // 0: Sedan, 1: F1, 2: Truck
-
-let obstacles = [];
-let roadSegments = [];
-let clock = new THREE.Clock();
-let spawnTimer = 0;
-
-// DOM Target Selectors
+// Element UI Selectors Binds
 const menuOverlay = document.getElementById('menu-overlay');
 const gameoverOverlay = document.getElementById('gameover-overlay');
 const hud = document.getElementById('hud');
-const scoreVal = document.getElementById('score-val');
-const speedVal = document.getElementById('speed-val');
+const mobileControls = document.getElementById('mobile-controls');
 
-// --- 3D Model Factory Engine ---
-function createSedan(color) {
-    const group = new THREE.Group();
-    const bodyGeom = new THREE.BoxGeometry(1.8, 0.7, 3.8);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.1, metalness: 0.2 });
-    const body = new THREE.Mesh(bodyGeom, bodyMat);
-    body.position.y = 0.4;
-    group.add(body);
+const distanceVal = document.getElementById('distance-val');
+const coinsVal = document.getElementById('coins-val');
+const fuelBar = document.getElementById('fuel-bar');
+const fuelTxt = document.getElementById('fuel-txt');
 
-    const cabinGeom = new THREE.BoxGeometry(1.4, 0.6, 2.0);
-    const cabinMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.0 });
-    const cabin = new THREE.Mesh(cabinGeom, cabinMat);
-    cabin.position.set(0, 0.95, -0.2);
-    group.add(cabin);
-
-    addWheels(group);
-    return group;
-}
-
-function createF1(color) {
-    const group = new THREE.Group();
-    const chassisGeom = new THREE.BoxGeometry(1.0, 0.4, 4.2);
-    const chassisMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.2 });
-    const chassis = new THREE.Mesh(chassisGeom, chassisMat);
-    chassis.position.y = 0.2;
-    group.add(chassis);
-
-    const frontWingGeom = new THREE.BoxGeometry(2.4, 0.1, 0.6);
-    const wingMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-    const frontWing = new THREE.Mesh(frontWingGeom, wingMat);
-    frontWing.position.set(0, 0.15, -2.0);
-    group.add(frontWing);
-
-    const rearWingGeom = new THREE.BoxGeometry(2.0, 0.5, 0.5);
-    const rearWing = new THREE.Mesh(rearWingGeom, wingMat);
-    rearWing.position.set(0, 0.7, 1.9);
-    group.add(rearWing);
-
-    addWheels(group, 0.4, 0.45);
-    return group;
-}
-
-function createTruck(color) {
-    const group = new THREE.Group();
-    const bedGeom = new THREE.BoxGeometry(2.0, 1.6, 4.5);
-    const bedMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 });
-    const bed = new THREE.Mesh(bedGeom, bedMat);
-    bed.position.y = 1.0;
-    group.add(bed);
-
-    const cabGeom = new THREE.BoxGeometry(2.0, 1.7, 1.4);
-    const cabMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
-    const cab = new THREE.Mesh(cabGeom, cabMat);
-    cab.position.set(0, 1.05, -2.2);
-    group.add(cab);
-
-    addWheels(group, 0.5, 0.55);
-    return group;
-}
-
-function addWheels(group, width = 0.35, radius = 0.4) {
-    const wheelGeom = new THREE.CylinderGeometry(radius, radius, width, 16);
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.9 });
-    
-    const positions = [
-        [-1.0, radius, -1.2], [1.0, radius, -1.2],
-        [-1.0, radius, 1.2],  [1.0, radius, 1.2]
-    ];
-    positions.forEach(pos => {
-        const wheel = new THREE.Mesh(wheelGeom, wheelMat);
-        wheel.rotation.z = Math.PI / 2;
-        wheel.position.set(pos[0], pos[1], pos[2]);
-        group.add(wheel);
-    });
-}
-
-// --- Environment Initialization System ---
-function init() {
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x020617); 
-    scene.fog = new THREE.FogExp2(0x020617, 0.012); // Slightly backed out fog for better long-range tracking
-
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    // Locked perspective coordinates placed behind driving zone plane
-    camera.position.set(0, 5.0, 9.0);
-    camera.lookAt(0, 1.0, -5.0);
-
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    // Blasted environmental setups to ensure full asset visibility lighting rules
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambientLight);
-
-    const dirLight = new THREE.DirectionLight(0xffffff, 1.2);
-    dirLight.position.set(5, 20, 15);
-    scene.add(dirLight);
-
-    for (let i = 0; i < 6; i++) {
-        createRoadSegment(-i * 50);
-    }
-}
-
-function createRoadSegment(zOffset) {
-    const segment = new THREE.Group();
-    const roadGeom = new THREE.PlaneGeometry(14, 50);
-    const roadMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6 });
-    const road = new THREE.Mesh(roadGeom, roadMat);
-    road.rotation.x = -Math.PI / 2;
-    segment.add(road);
-
-    // Built-in structural grids layout markers lines
-    const lineGeom = new THREE.PlaneGeometry(0.2, 5);
-    const lineMat = new THREE.MeshBasicMaterial({ color: 0x334155 });
-    
-    for (let z = -20; z <= 20; z += 10) {
-        const line1 = new THREE.Mesh(lineGeom, lineMat);
-        line1.rotation.x = -Math.PI / 2;
-        line1.position.set(-LANE_WIDTH/2, 0.02, z);
-        segment.add(line1);
-
-        const line2 = new THREE.Mesh(lineGeom, lineMat);
-        line2.rotation.x = -Math.PI / 2;
-        line2.position.set(LANE_WIDTH/2, 0.02, z);
-        segment.add(line2);
-    }
-
-    segment.position.z = zOffset;
-    scene.add(segment);
-    roadSegments.push(segment);
-}
-
-// --- Runtime Execution Logic Pipeline ---
-function buildPlayerCar() {
-    if (playerCar) scene.remove(playerCar);
-    
-    if (selectedCarType === 0) playerCar = createSedan(0x06b6d4);      // Neon Cyan
-    else if (selectedCarType === 1) playerCar = createF1(0xf59e0b);     // Amber Orange
-    else if (selectedCarType === 2) playerCar = createTruck(0xa855f7);  // Cyber Violet
-    
-    playerLane = 1; // Force Center Lane reset setup rules
-    targetX = LANES[playerLane];
-    playerCar.position.set(targetX, 0, 0); // Position explicitly set at start line context
-    scene.add(playerCar);
-}
-
-function spawnObstacle() {
-    const lane = Math.floor(Math.random() * 3);
-    const models = ['sedan', 'f1', 'truck'];
-    const chosenModel = models[Math.floor(Math.random() * models.length)];
-    const colors = [0xe11d48, 0x10b981, 0xf43f5e, 0xeab308];
-    const chosenColor = colors[Math.floor(Math.random() * colors.length)];
-    
-    let obsMesh;
-    if (chosenModel === 'sedan') obsMesh = createSedan(chosenColor);
-    else if (chosenModel === 'f1') obsMesh = createF1(chosenColor);
-    else obsMesh = createTruck(chosenColor);
-
-    obsMesh.position.set(LANES[lane], 0, -150); // Set far down grid line pathway entry boundaries
-    obsMesh.rotation.y = Math.PI; 
-    
-    scene.add(obsMesh);
-    obstacles.push(obsMesh);
-}
-
-function moveLeft() {
-    if (playerLane > 0) playerLane--;
-    targetX = LANES[playerLane];
-}
-
-function moveRight() {
-    if (playerLane < 2) playerLane++;
-    targetX = LANES[playerLane];
-}
-
-function handleInput(e) {
-    if (gameState !== 'PLAYING') return;
-    if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') moveLeft();
-    if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') moveRight();
-}
-
-// --- Direct Coordinate Mobile Click Interceptor ---
-window.addEventListener('touchstart', (e) => {
-    if (gameState !== 'PLAYING') return;
-    
-    // Ignore execution clicks passing over interactive layout action overlay elements
-    if (e.target.tagName === 'BUTTON') return;
-
-    const clickX = e.touches[0].clientX;
-    const midpoint = window.innerWidth / 2;
-
-    if (clickX < midpoint) {
-        moveLeft();
-    } else {
-        moveRight();
-    }
-}, { passive: false });
-
-function check3DCollision(box1, box2) {
-    return (
-        Math.abs(box1.position.x - box2.position.x) < 1.4 &&
-        Math.abs(box1.position.z - box2.position.z) < 3.5
-    );
-}
-
-function animate() {
-    requestAnimationFrame(animate);
-    const delta = clock.getDelta();
-
-    if (gameState === 'PLAYING') {
-        if (playerCar) {
-            // Apply high speed spatial interpolation transformations matrices smoothly
-            playerCar.position.x += (targetX - playerCar.position.x) * 0.20;
-            playerCar.rotation.z = -(playerCar.position.x - targetX) * 0.12;
-        }
-
-        speed += 0.00015; // Moderate speed ramp scale factors values
-        score += 15 * delta;
-        scoreVal.innerText = Math.floor(score);
-        speedVal.innerText = `${Math.floor(speed * 125)} MPH`;
-
-        // Continuous modular loop translation sequence on highway road tiles arrays
-        roadSegments.forEach(segment => {
-            segment.position.z += speed * 65 * delta;
-            if (segment.position.z > 50) {
-                segment.position.z -= 300; // Throw directly backward out of bounds view path queues
-            }
-        });
-
-        // Spawn Cycle Execution Logic Steps
-        spawnTimer += delta;
-        if (spawnTimer > Math.max(0.5, 1.6 - speed * 0.7)) {
-            spawnObstacle();
-            spawnTimer = 0;
-        }
-
-        // Oncoming Objects Loop Array Pipeline Updates
-        for (let i = obstacles.length - 1; i >= 0; i--) {
-            let obs = obstacles[i];
-            obs.position.z += (speed * 65 + 12) * delta;
-
-            if (playerCar && check3DCollision(playerCar, obs)) {
-                gameState = 'GAMEOVER';
-                document.getElementById('final-score').innerText = Math.floor(score);
-                hud.classList.add('hidden');
-                gameoverOverlay.classList.remove('hidden');
-            }
-
-            if (obs.position.z > 20) {
-                scene.remove(obs);
-                obstacles.splice(i, 1);
-            }
-        }
-    }
-    renderer.render(scene, camera);
-}
-
-// --- Menu Infrastructure Interaction Handlers ---
-const setupCarSelection = () => {
-    const buttons = document.querySelectorAll('.car-select-btn');
-    buttons.forEach((btn, index) => {
-        btn.addEventListener('click', () => {
-            buttons.forEach(b => b.classList.remove('border-cyan-500', 'active'));
-            btn.classList.add('border-cyan-500', 'active');
-            selectedCarType = index;
-        });
-    });
+// Core Simulation Parameters Configuration
+const PHYSICS = {
+    gravity: 0.18,
+    friction: 0.985,
+    airResistance: 0.995,
+    engineTorque: 0.12,
+    brakingPower: 0.08,
+    rotationSpeed: 0.035,
+    maxFuel: 100
 };
 
-function exitToMenu() {
-    gameState = 'MENU';
-    hud.classList.add('hidden');
-    gameoverOverlay.classList.add('hidden');
-    menuOverlay.classList.remove('hidden');
+// Application Global Matrices States
+let gameState = 'MENU';
+let coinsCollected = 0;
+let currentFuel = 100;
+let worldOffset = 0; // Visual map offset parameter
+
+// Primary Rigid Body Structural Coordinates Setup
+let car = {
+    x: 180,
+    y: 200,
+    vx: 0,
+    vy: 0,
+    angle: 0,
+    angularVelocity: 0,
+    width: 65,
+    height: 25,
+    frontWheelOffset: 24,
+    backWheelOffset: -24,
+    wheelRadius: 10
+};
+
+let wheels = {
+    back: { x: 0, y: 0, grounded: false, contactY: 0 },
+    front: { x: 0, y: 0, grounded: false, contactY: 0 }
+};
+
+// Collective tracking collections
+let trackPoints = [];
+let pickupAssets = [];
+
+// Input Matrix Map Tracking Flags
+let inputs = { gas: false, brake: false };
+
+// --- Procedural Generation Math Formulas ---
+function getTerrainHeight(worldX) {
+    // Overlapping sine mathematical waves generate endless rolling vector ridges 
+    let baseHill = Math.sin(worldX * 0.003) * 110;
+    let steepRidge = Math.cos(worldX * 0.008) * Math.sin(worldX * 0.001) * 60;
+    let smallBumps = Math.sin(worldX * 0.04) * 5;
     
-    obstacles.forEach(obs => scene.remove(obs));
-    obstacles = [];
-    
-    if (playerCar) {
-        scene.remove(playerCar);
-        playerCar = null;
+    // Flat launchpad zone constraint logic sequence for start zone safety
+    if (worldX < 300) return 320; 
+
+    return 340 - (baseHill + steepRidge + smallBumps);
+}
+
+// Map Item Generator Pipeline
+function generateWorldAssetsForRange(startLineX, endLineX) {
+    for (let x = startLineX; x < endLineX; x += 120) {
+        if (x < 500) continue; // Skip items in start zone
+        
+        let roadY = getTerrainHeight(x);
+        
+        if (Math.random() < 0.35) {
+            pickupAssets.push({ type: 'COIN', x: x, y: roadY - 30, radius: 8, collected: false });
+        } else if (Math.random() < 0.08) {
+            pickupAssets.push({ type: 'FUEL', x: x, y: roadY - 40, w: 16, h: 22, collected: false });
+        }
     }
 }
 
+// --- Physics Engine Execution Loop ---
+function updatePhysics() {
+    // Deduct standard fuel limits progressively over drive state durations
+    if (inputs.gas) {
+        currentFuel -= 0.12;
+    } else {
+        currentFuel -= 0.02; // Minor drainage when idling
+    }
+    
+    if (currentFuel <= 0) {
+        currentFuel = 0;
+        inputs.gas = false; // System engine cutoff starvation logic flags
+    }
+
+    // Apply standard systemic forces
+    car.vy += PHYSICS.gravity;
+    car.vx *= PHYSICS.airResistance;
+    car.angle += car.angularVelocity;
+    car.angularVelocity *= PHYSICS.friction;
+
+    // Translate global coordinate offsets back onto wheels structures orientations
+    let cosA = Math.cos(car.angle);
+    let sinA = Math.sin(car.angle);
+
+    wheels.back.x = car.x + car.backWheelOffset * cosA;
+    wheels.back.y = car.y + car.backWheelOffset * sinA + 12;
+    
+    wheels.front.x = car.x + car.frontWheelOffset * cosA;
+    wheels.front.y = car.y + car.frontWheelOffset * sinA + 12;
+
+    // Check collision hooks directly against ground profile vectors formulas
+    let backGroundY = getTerrainHeight(wheels.back.x + worldOffset);
+    let frontGroundY = getTerrainHeight(wheels.front.x + worldOffset);
+
+    wheels.back.grounded = wheels.back.y >= backGroundY - car.wheelRadius;
+    wheels.front.grounded = wheels.front.y >= frontGroundY - car.wheelRadius;
+
+    // Handle Ground Snap Interceptors Math Pipeline
+    if (wheels.back.grounded) {
+        wheels.back.y = backGroundY - car.wheelRadius;
+        car.vy += (wheels.back.y - (car.y + car.backWheelOffset * sinA + 12)) * 0.15; // Suspension contraction force
+    }
+    if (wheels.front.grounded) {
+        wheels.front.y = frontGroundY - car.wheelRadius;
+        car.vy += (wheels.front.y - (car.y + car.frontWheelOffset * sinA + 12)) * 0.15;
+    }
+
+    // Input Execution Vectors Handling
+    if (inputs.gas) {
+        if (wheels.back.grounded || wheels.front.grounded) {
+            // Apply forward velocity vectors along relative pitch profiles orientations
+            let pushAngle = car.angle;
+            car.vx += Math.cos(pushAngle) * PHYSICS.engineTorque;
+            car.vy += Math.sin(pushAngle) * PHYSICS.engineTorque;
+        } else {
+            // Rotational pitch adjust forces inside open air space vectors curves
+            car.angularVelocity += PHYSICS.rotationSpeed * 0.35;
+        }
+    }
+    if (inputs.brake) {
+        if (wheels.back.grounded || wheels.front.grounded) {
+            car.vx -= Math.cos(car.angle) * PHYSICS.brakingPower;
+        } else {
+            car.angularVelocity -= PHYSICS.rotationSpeed * 0.35;
+        }
+    }
+
+    // Apply angular drag adjustments if both tracking nodes remain fully anchored on track surfaces
+    if (wheels.back.grounded && wheels.front.grounded) {
+        let desiredAngle = Math.atan2(frontGroundY - backGroundY, wheels.front.x - wheels.back.x);
+        let angleDiff = desiredAngle - car.angle;
+        
+        // Normalize angle variance bounds cleanly
+        angleDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+        car.angle += angleDiff * 0.3; // High dampening coefficient ground snap value
+        car.angularVelocity = 0;
+    }
+
+    // Translate global offset tracker pipelines
+    if (car.vx < 0 && worldOffset <= 0) {
+        car.vx = 0;
+    }
+    
+    // Smooth camera viewport tracking scroll matrix locks updates
+    worldOffset += car.vx;
+    car.y += car.vy;
+
+    // Lock position boundary restrictions over global visual layout zones
+    car.vx *= 0.98; 
+
+    // Handle structural failure evaluation conditions triggers (Death Checks)
+    let currentChassisGroundY = getTerrainHeight(car.x + worldOffset);
+    if (car.y > currentChassisGroundY + 10) {
+        triggerCrash("VEHICLE DESTROYED");
+    }
+
+    // Flipped upside down check logic loop rules sequence parameters bounds
+    let absRot = Math.abs(car.angle) % (Math.PI * 2);
+    if ((wheels.back.grounded || wheels.front.grounded) && (absRot > Math.PI * 0.45 && absRot < Math.PI * 1.5)) {
+        triggerCrash("DRIVER HEAD CRASH");
+    }
+    
+    if (currentFuel <= 0 && Math.abs(car.vx) < 0.05 && !wheels.back.grounded && !wheels.front.grounded) {
+        triggerCrash("OUT OF FUEL RESERVE");
+    }
+}
+
+// --- Item Sweeper & Intersection Processing Math ---
+function processTokenIntersections() {
+    pickupAssets.forEach(asset => {
+        if (asset.collected) return;
+        
+        // Account relative screen coordinates offsets
+        let assetScreenX = asset.x - worldOffset;
+        let dx = car.x - assetScreenX;
+        let dy = car.y - asset.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < car.width * 0.6 + 10) {
+            asset.collected = true;
+            if (asset.type === 'COIN') {
+                coinsCollected += 1;
+                coinsVal.innerText = coinsCollected.toString();
+            } else if (asset.type === 'FUEL') {
+                currentFuel = Math.min(PHYSICS.maxFuel, currentFuel + 45); // Top off tank
+            }
+        }
+    });
+}
+
+// --- Graphical Render Engine Graphics Functions ---
+function drawWorldGrid() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Deep gradient atmospheric background sky
+    let bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    bgGrad.addColorStop(0, '#020617');
+    bgGrad.addColorStop(1, '#0f172a');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Vector Terrain Points Mesh Lines Paths Binds
+    ctx.beginPath();
+    let startViewX = 0;
+    let endViewX = canvas.width;
+
+    ctx.moveTo(0, canvas.height);
+    for (let screenX = startViewX; screenX <= endViewX; screenX += 5) {
+        let computedWorldX = screenX + worldOffset;
+        let groundY = getTerrainHeight(computedWorldX);
+        ctx.lineTo(screenX, groundY);
+    }
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.closePath();
+    
+    ctx.fillStyle = '#1e293b'; // Ground fill matrix color mesh
+    ctx.fill();
+    
+    // Draw neon glowing boundary outline track top edge profile
+    ctx.beginPath();
+    for (let screenX = startViewX; screenX <= endViewX; screenX += 5) {
+        let computedWorldX = screenX + worldOffset;
+        let groundY = getTerrainHeight(computedWorldX);
+        if (screenX === 0) ctx.moveTo(screenX, groundY);
+        else ctx.lineTo(screenX, groundY);
+    }
+    ctx.strokeStyle = '#06b6d4'; // Cyber cyan line track strip
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Render pickup items array
+    pickupAssets.forEach(asset => {
+        if (asset.collected) return;
+        let screenX = asset.x - worldOffset;
+        if (screenX < -50 || screenX > canvas.width + 50) return; // Cull out of view items
+
+        if (asset.type === 'COIN') {
+            ctx.beginPath();
+            ctx.arc(screenX, asset.y, asset.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#f59e0b';
+            ctx.shadowColor = '#f59e0b';
+            ctx.shadowBlur = 10;
+            ctx.fill();
+            ctx.shadowBlur = 0; // Clear shadow
+        } else if (asset.type === 'FUEL') {
+            ctx.fillStyle = '#e11d48';
+            ctx.fillRect(screenX - asset.w/2, asset.y - asset.h/2, asset.w, asset.h);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '9px monospace';
+            ctx.fillText("GAS", screenX - 8, asset.y + 3);
+        }
+    });
+
+    // --- Draw Physics Buggy Rig Asset ---
+    ctx.save();
+    ctx.translate(car.x, car.y);
+    ctx.rotate(car.angle);
+
+    // Draw Main Driver Cabin Box Chassis
+    ctx.fillStyle = '#a855f7'; // Neon Purple Shell
+    ctx.fillRect(-car.width / 2, -car.height / 2, car.width, car.height);
+    
+    // Top spoiler cage tube structural line frame profile element
+    ctx.beginPath();
+    ctx.moveTo(-15, -car.height/2);
+    ctx.lineTo(-5, -car.height/2 - 12);
+    ctx.lineTo(15, -car.height/2 - 12);
+    ctx.lineTo(20, -car.height/2);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Draw Wheel Components independently outside body space rotations to maintain independent axis updates
+    drawWheelMesh(wheels.back.x, wheels.back.y);
+    drawWheelMesh(wheels.front.x, wheels.front.y);
+}
+
+function drawWheelMesh(wx, wy) {
+    ctx.beginPath();
+    ctx.arc(wx, wy, car.wheelRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#334155';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.fill();
+    ctx.stroke();
+    
+    // Radial spoke visual identifier lines index vector to verify rolling rotation states
+    ctx.beginPath();
+    ctx.moveTo(wx, wy);
+    let scrollStepAngle = worldOffset / 12; // Modulate spin speed relative to movement rate scales
+    ctx.lineTo(wx + Math.cos(scrollStepAngle) * car.wheelRadius, wy + Math.sin(scrollStepAngle) * car.wheelRadius);
+    ctx.strokeStyle = '#020617';
+    ctx.stroke();
+}
+
+// --- Interface Overlay Displays Handlers Binds ---
+function triggerCrash(message) {
+    gameState = 'GAMEOVER';
+    document.getElementById('fail-reason').innerText = message;
+    document.getElementById('final-distance').innerText = `${Math.floor(worldOffset / 10)}m`;
+    document.getElementById('final-coins').innerText = coinsCollected.toString();
+    
+    hud.classList.add('hidden');
+    mobileControls.classList.add('hidden');
+    gameoverOverlay.classList.remove('hidden');
+}
+
+function resetSimulationState() {
+    worldOffset = 0;
+    coinsCollected = 0;
+    currentFuel = 100;
+    
+    car.x = 180;
+    car.y = 220;
+    car.vx = 0;
+    car.vy = 0;
+    car.angle = 0;
+    car.angularVelocity = 0;
+
+    pickupAssets = [];
+    generateWorldAssetsForRange(0, 4000); // Pre-seed initial track blocks zones
+
+    coinsVal.innerText = "0";
+    distanceVal.innerText = "0m";
+    fuelBar.style.width = "100%";
+    fuelTxt.innerText = "100%";
+}
+
+// --- Frame Loop Pipelines Master Core Execution ---
+let chunkMarkerX = 2000;
+function runMasterTickLoop() {
+    if (gameState === 'PLAYING') {
+        updatePhysics();
+        processTokenIntersections();
+        
+        // Procedural map endless tracking generation checker hooks
+        if (worldOffset > chunkMarkerX - 1500) {
+            generateWorldAssetsForRange(chunkMarkerX, chunkMarkerX + 2000);
+            chunkMarkerX += 2000;
+        }
+
+        // Live HUD stats strings formatting steps updates
+        distanceVal.innerText = `${Math.floor(worldOffset / 10)}m`;
+        let computedPct = Math.floor(currentFuel);
+        fuelBar.style.width = `${computedPct}%`;
+        fuelTxt.innerText = `${computedPct}%`;
+        
+        if (computedPct < 30) {
+            fuelTxt.className = "text-rose-500 font-bold animate-pulse";
+        } else {
+            fuelTxt.className = "text-emerald-400 font-bold";
+        }
+    }
+
+    drawWorldGrid();
+    requestAnimationFrame(runMasterTickLoop);
+}
+
+// --- Hardware Inputs Handlers System Routes ---
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') inputs.gas = true;
+    if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') inputs.brake = true;
+});
+
+window.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') inputs.gas = false;
+    if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') inputs.brake = false;
+});
+
+// Mobile Structural Hardware Layout Touch Interfaces Hook Setup Binds
+const gasBtn = document.getElementById('ctrl-gas');
+const brakeBtn = document.getElementById('ctrl-brake');
+
+gasBtn.addEventListener('touchstart', (e) => { e.preventDefault(); inputs.gas = true; });
+gasBtn.addEventListener('touchend', (e) => { e.preventDefault(); inputs.gas = false; });
+
+brakeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); inputs.brake = true; });
+brakeBtn.addEventListener('touchend', (e) => { e.preventDefault(); inputs.brake = false; });
+
+// Menu Navigation Click Handlers Action Links
 document.getElementById('start-btn').addEventListener('click', () => {
     menuOverlay.classList.add('hidden');
     hud.classList.remove('hidden');
-    buildPlayerCar(); // Explicit generation of car matrix directly here on start execution action bounds
-    score = 0;
-    speed = 0.8;
+    if (window.innerWidth < 768) mobileControls.classList.remove('hidden');
+    resetSimulationState();
     gameState = 'PLAYING';
 });
 
 document.getElementById('restart-btn').addEventListener('click', () => {
     gameoverOverlay.classList.add('hidden');
     hud.classList.remove('hidden');
-    obstacles.forEach(obs => scene.remove(obs));
-    obstacles = [];
-    buildPlayerCar();
-    score = 0;
-    speed = 0.8;
+    if (window.innerWidth < 768) mobileControls.classList.remove('hidden');
+    resetSimulationState();
     gameState = 'PLAYING';
 });
 
-document.getElementById('hud-back-btn').addEventListener('click', exitToMenu);
-document.getElementById('go-back-menu-btn').addEventListener('click', exitToMenu);
-
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-window.addEventListener('keydown', handleInput);
-setupCarSelection();
-init();
-animate();
+// Fire runtime clock rendering threads loops initialization
+requestAnimationFrame(runMasterTickLoop);
