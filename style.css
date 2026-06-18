@@ -4,10 +4,11 @@ html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    touch-action: none;
+    background-color: #020617;
 }
-#game-container {
-    touch-action: none;
-    -webkit-touch-callout: none;
+/* Completely block selection highlights and text loops over virtual layout containers */
+canvas {
+    user-select: none;
     -webkit-user-select: none;
+    touch-action: none;
 }
