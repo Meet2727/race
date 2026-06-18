@@ -2,37 +2,35 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Neon Edge Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Neon AI Platformer</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen overflow-hidden font-mono select-none flex flex-col items-center justify-center">
+<body class="bg-slate-950 text-slate-100 min-h-screen overflow-hidden font-mono select-none flex flex-col items-center justify-center p-0 m-0 w-full h-full">
 
-    <div id="game-container" class="relative rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 w-full max-w-3xl aspect-[16/9]">
+    <div id="game-container" class="relative w-full max-w-3xl aspect-[16/9] bg-slate-900 overflow-hidden shadow-2xl md:rounded-2xl border border-slate-800">
         <canvas id="gameCanvas" class="block w-full h-full"></canvas>
 
         <div id="hud" class="absolute top-4 left-4 right-4 z-10 flex justify-between pointer-events-none hidden">
             <div class="flex gap-2 pointer-events-auto">
-                <div class="bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-1.5 backdrop-blur-md flex items-center gap-2">
-                    <i class="fa-solid fa-bolt text-cyan-400"></i>
-                    <span id="score-val" class="text-xs font-bold text-cyan-400">0</span>
+                <div class="bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-1.5 backdrop-blur-md text-xs font-bold text-cyan-400">
+                    SCORE: <span id="score-val">0</span>
                 </div>
-                <div id="key-hud" class="bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-1.5 backdrop-blur-md flex items-center gap-2 text-slate-500 transition-colors">
-                    <i class="fa-solid fa-key"></i>
-                    <span class="text-[10px] font-bold uppercase tracking-wider">Firewall Key</span>
+                <div id="ai-status" class="bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-1.5 backdrop-blur-md text-xs font-bold text-slate-400 transition-colors">
+                    MODE: <span id="mode-txt">MANUAL</span>
                 </div>
             </div>
             
-            <button id="hud-leave-btn" class="bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-xl px-4 py-1.5 text-xs font-bold pointer-events-auto active:scale-95 transition-all cursor-pointer">
-                LEAVE SESSION
+            <button id="hud-leave-btn" class="bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-xl px-4 py-1.5 text-xs font-bold pointer-events-auto active:scale-95 transition-all cursor-pointer">
+                LEAVE
             </button>
         </div>
 
         <div id="menu-overlay" class="absolute inset-0 z-20 bg-slate-950/95 flex flex-col items-center justify-center p-6 overflow-y-auto">
-            <h1 class="text-3xl font-black bg-gradient-to-r from-cyan-400 to-fuchsia-500 bg-clip-text text-transparent mb-1 tracking-tight">NEON EDGE PLATFORMER</h1>
-            <p class="text-[11px] text-slate-400 mb-6 text-center max-w-sm">Dynamic canvas coordinates auto-scale engine ready for execution.</p>
+            <h1 class="text-3xl font-black bg-gradient-to-r from-cyan-400 via-indigo-400 to-fuchsia-500 bg-clip-text text-transparent mb-1 tracking-tight">NEON AI INTELLIGENCE</h1>
+            <p class="text-[11px] text-slate-400 mb-6 text-center max-w-sm">Canvas UI touch layer with real-time on-board reinforcement learning engines.</p>
             
             <div class="w-full max-w-md space-y-4 text-left">
                 <div>
@@ -45,7 +43,7 @@
                 </div>
 
                 <div>
-                    <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-widest mb-1.5">2. Level Core Environment Theme</span>
+                    <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-widest mb-1.5">2. Environment Core Theme</span>
                     <div class="grid grid-cols-3 gap-2">
                         <button id="theme-0" class="theme-opt active border border-fuchsia-500 bg-slate-900 p-2 rounded-xl text-xs font-bold text-fuchsia-400 cursor-pointer">Cyber City</button>
                         <button id="theme-1" class="theme-opt border border-slate-800 bg-slate-900 p-2 rounded-xl text-xs font-bold text-slate-400 cursor-pointer">Acid Void</button>
@@ -54,14 +52,14 @@
                 </div>
             </div>
 
-            <button id="start-btn" class="w-full max-w-xs py-3.5 mt-8 bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-slate-950 font-bold rounded-xl shadow-lg shadow-cyan-500/10 hover:scale-105 transition-all cursor-pointer">
-                LAUNCH DEPLOYMENT RUN
+            <button id="start-btn" class="w-full max-w-xs py-3.5 mt-8 bg-gradient-to-r from-cyan-500 standard to-fuchsia-600 text-slate-950 font-bold rounded-xl shadow-lg shadow-cyan-500/10 hover:scale-105 transition-all cursor-pointer">
+                LAUNCH RUNTIME DEPLOYMENT
             </button>
         </div>
 
         <div id="gameover-overlay" class="absolute inset-0 z-20 bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center hidden">
-            <h2 id="end-title" class="text-3xl font-black text-rose-500 mb-1 tracking-wider">SYSTEM INTEGRITY FRACTURED</h2>
-            <p id="end-desc" class="text-xs text-slate-400 mb-6">Avatar coordinates vanished out of loop boundaries.</p>
+            <h2 id="end-title" class="text-3xl font-black text-rose-500 mb-1 tracking-wider">INTEGRITY FRACTURED</h2>
+            <p id="end-desc" class="text-xs text-slate-400 mb-6">Execution cycle termination signature logged.</p>
             
             <div class="bg-slate-900 border border-slate-800 rounded-xl px-6 py-3 mb-6 w-full max-w-xs flex justify-between text-xs text-slate-400">
                 <span>Final Output Score:</span> <span id="final-score" class="font-bold text-slate-100">0</span>
@@ -69,20 +67,12 @@
 
             <div class="flex flex-col gap-2 w-full max-w-xs">
                 <button id="restart-btn" class="w-full py-3.5 bg-slate-100 text-slate-950 font-bold rounded-xl shadow-lg hover:scale-105 transition-all cursor-pointer">
-                    RELOAD RUNTIME INSTANCE
+                    RELOAD INSTANCE
                 </button>
                 <button id="menu-back-btn" class="w-full py-2 bg-slate-900 border border-slate-800 text-slate-400 text-xs rounded-xl hover:text-slate-200 transition-all cursor-pointer">
-                    RETURN TO SELECTION CONFIGS
+                    RETURN TO SETUP OPTIONS
                 </button>
             </div>
-        </div>
-
-        <div id="mobile-controls" class="absolute bottom-4 left-4 right-4 z-10 flex justify-between pointer-events-none md:hidden hidden">
-            <div class="flex gap-2">
-                <button id="btn-left" class="w-14 h-14 rounded-xl border border-slate-800 bg-slate-900/80 backdrop-blur-md pointer-events-auto flex items-center justify-center text-slate-400 active:text-cyan-400 active:scale-90 transition-all select-none"><i class="fa-solid fa-arrow-left text-lg"></i></button>
-                <button id="btn-right" class="w-14 h-14 rounded-xl border border-slate-800 bg-slate-900/80 backdrop-blur-md pointer-events-auto flex items-center justify-center text-slate-400 active:text-cyan-400 active:scale-90 transition-all select-none"><i class="fa-solid fa-arrow-right text-lg"></i></button>
-            </div>
-            <button id="btn-jump" class="w-16 h-14 rounded-xl border border-slate-800 bg-slate-900/80 backdrop-blur-md pointer-events-auto flex flex-col items-center justify-center text-slate-400 active:text-fuchsia-400 active:scale-90 transition-all select-none"><i class="fa-solid fa-angles-up text-base"></i><span class="text-[8px] font-bold mt-0.5">JUMP</span></button>
         </div>
     </div>
 
