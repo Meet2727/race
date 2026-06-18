@@ -3,22 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Neon Bounce</title>
+    <title>Neon Edge Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen overflow-hidden font-mono select-none flex flex-col items-center justify-center">
 
-    <div class="relative rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 w-full max-w-3xl aspect-[16/9]">
-        <canvas id="gameCanvas" width="800" height="450" class="block w-full h-full"></canvas>
+    <div id="game-container" class="relative rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 w-full max-w-3xl aspect-[16/9]">
+        <canvas id="gameCanvas" class="block w-full h-full"></canvas>
 
         <div id="hud" class="absolute top-4 left-4 right-4 z-10 flex justify-between pointer-events-none hidden">
-            <div class="bg-slate-900/80 border border-slate-800 rounded-xl px-4 py-2 backdrop-blur-md pointer-events-auto flex items-center gap-2">
-                <i class="fa-solid fa-bolt text-cyan-400"></i>
-                <div>
-                    <span class="text-[9px] text-slate-400 block uppercase tracking-wider">Score</span>
-                    <span id="score-val" class="text-sm font-bold text-cyan-400">0</span>
+            <div class="flex gap-2 pointer-events-auto">
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-1.5 backdrop-blur-md flex items-center gap-2">
+                    <i class="fa-solid fa-bolt text-cyan-400"></i>
+                    <span id="score-val" class="text-xs font-bold text-cyan-400">0</span>
+                </div>
+                <div id="key-hud" class="bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-1.5 backdrop-blur-md flex items-center gap-2 text-slate-500 transition-colors">
+                    <i class="fa-solid fa-key"></i>
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Firewall Key</span>
                 </div>
             </div>
             
@@ -29,7 +32,7 @@
 
         <div id="menu-overlay" class="absolute inset-0 z-20 bg-slate-950/95 flex flex-col items-center justify-center p-6 overflow-y-auto">
             <h1 class="text-3xl font-black bg-gradient-to-r from-cyan-400 to-fuchsia-500 bg-clip-text text-transparent mb-1 tracking-tight">NEON EDGE PLATFORMER</h1>
-            <p class="text-[11px] text-slate-400 mb-6 text-center max-w-sm">Calibrate matrix cosmetics and stage physics modules below before deployment.</p>
+            <p class="text-[11px] text-slate-400 mb-6 text-center max-w-sm">Dynamic canvas coordinates auto-scale engine ready for execution.</p>
             
             <div class="w-full max-w-md space-y-4 text-left">
                 <div>
@@ -76,15 +79,11 @@
 
         <div id="mobile-controls" class="absolute bottom-4 left-4 right-4 z-10 flex justify-between pointer-events-none md:hidden hidden">
             <div class="flex gap-2">
-                <button id="btn-left" class="w-14 h-14 rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md pointer-events-auto flex items-center justify-center text-slate-400 active:text-cyan-400 active:bg-cyan-500/10 active:scale-90 transition-all select-none"><i class="fa-solid fa-arrow-left text-lg"></i></button>
-                <button id="btn-right" class="w-14 h-14 rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md pointer-events-auto flex items-center justify-center text-slate-400 active:text-cyan-400 active:bg-cyan-500/10 active:scale-90 transition-all select-none"><i class="fa-solid fa-arrow-right text-lg"></i></button>
+                <button id="btn-left" class="w-14 h-14 rounded-xl border border-slate-800 bg-slate-900/80 backdrop-blur-md pointer-events-auto flex items-center justify-center text-slate-400 active:text-cyan-400 active:scale-90 transition-all select-none"><i class="fa-solid fa-arrow-left text-lg"></i></button>
+                <button id="btn-right" class="w-14 h-14 rounded-xl border border-slate-800 bg-slate-900/80 backdrop-blur-md pointer-events-auto flex items-center justify-center text-slate-400 active:text-cyan-400 active:scale-90 transition-all select-none"><i class="fa-solid fa-arrow-right text-lg"></i></button>
             </div>
-            <button id="btn-jump" class="w-16 h-14 rounded-xl border border-slate-800 bg-slate-900/70 backdrop-blur-md pointer-events-auto flex flex-col items-center justify-center text-slate-400 active:text-fuchsia-400 active:bg-fuchsia-500/10 active:scale-90 transition-all select-none"><i class="fa-solid fa-angles-up text-base"></i><span class="text-[8px] font-bold mt-0.5">JUMP</span></button>
+            <button id="btn-jump" class="w-16 h-14 rounded-xl border border-slate-800 bg-slate-900/80 backdrop-blur-md pointer-events-auto flex flex-col items-center justify-center text-slate-400 active:text-fuchsia-400 active:scale-90 transition-all select-none"><i class="fa-solid fa-angles-up text-base"></i><span class="text-[8px] font-bold mt-0.5">JUMP</span></button>
         </div>
-    </div>
-
-    <div class="mt-4 text-center text-[11px] text-slate-500 hidden md:block">
-        Use <span class="bg-slate-900 px-1.5 py-0.5 border border-slate-800 rounded text-slate-400 font-mono">← / A</span> and <span class="bg-slate-900 px-1.5 py-0.5 border border-slate-800 rounded text-slate-400 font-mono">→ / D</span> to move. Tap <span class="bg-slate-900 px-1.5 py-0.5 border border-slate-800 rounded text-slate-400 font-mono">Space / W / ↑</span> to trigger jumps.
     </div>
 
     <script src="game.js"></script>
