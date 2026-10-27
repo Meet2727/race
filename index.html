@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Character Customizer & Studio</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <div class="brand">
+                <h1>3D Character Studio</h1>
+                <p>Realistic Full-Body Customizer</p>
+            </div>
+
+            <div class="control-section">
+                <h3>1. Select Preset / Reference Image</h3>
+                <div class="preset-grid">
+                    <div class="preset-card active" data-preset="1">
+                        <img src="assets/character1.jpg" alt="Character 1">
+                        <span>Warrior (Green Eyes)</span>
+                    </div>
+                    <div class="preset-card" data-preset="2">
+                        <img src="assets/character2.jpg" alt="Character 2">
+                        <span>Royal (Blonde / Gold)</span>
+                    </div>
+                </div>
+                <div class="upload-box">
+                    <label for="tex-upload" class="btn-secondary">Upload Custom Face/Texture</label>
+                    <input type="file" id="tex-upload" accept="image/*" hidden>
+                </div>
+                <div class="upload-box">
+                    <label for="model-upload" class="btn-secondary">Load Custom .GLB/.GLTF Model</label>
+                    <input type="file" id="model-upload" accept=".glb,.gltf" hidden>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>2. Body & Appearance</h3>
+                <div class="control-group">
+                    <label>Render Mode</label>
+                    <select id="render-mode">
+                        <option value="combined">Full Body 3D + Mapped Face</option>
+                        <option value="relief">3D Relief Depth Mesh (Image to 3D)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Skin Tone</label>
+                    <input type="color" id="skin-color" value="#f3d6c6">
+                </div>
+                <div class="control-group">
+                    <label>Hair Color</label>
+                    <input type="color" id="hair-color" value="#2a2421">
+                </div>
+                <div class="control-group">
+                    <label>Eye Color</label>
+                    <input type="color" id="eye-color" value="#4a7c59">
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>3. Outfit & Armor Customization</h3>
+                <div class="control-group">
+                    <label>Primary Outfit Color</label>
+                    <input type="color" id="outfit-color" value="#1f1f24">
+                </div>
+                <div class="control-group">
+                    <label>Accent / Trim Color (Gold/Yellow)</label>
+                    <input type="color" id="trim-color" value="#d4af37">
+                </div>
+                <div class="control-group">
+                    <label>Armor Metalness</label>
+                    <input type="range" id="metalness" min="0" max="1" step="0.05" value="0.8">
+                </div>
+                <div class="control-group">
+                    <label>Surface Roughness</label>
+                    <input type="range" id="roughness" min="0" max="1" step="0.05" value="0.25">
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>4. Pose, Animation & Lighting</h3>
+                <div class="control-group">
+                    <label>Animation Pose</label>
+                    <select id="pose-select">
+                        <option value="idle">Breathing Idle</option>
+                        <option value="heroic">Heroic Guard Stance</option>
+                        <option value="turn">Turntable Showcase</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>3D Depth Relief Intensity</label>
+                    <input type="range" id="depth-scale" min="0" max="1.5" step="0.05" value="0.45">
+                </div>
+                <div class="control-group">
+                    <label>Studio Light Intensity</label>
+                    <input type="range" id="light-intensity" min="0.2" max="3" step="0.1" value="1.6">
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="reset-cam" class="btn-primary">Reset Camera</button>
+                <button id="export-config" class="btn-secondary">Export Config JSON</button>
+            </div>
+        </aside>
+
+        <!-- 3D Viewport -->
+        <main class="viewport">
+            <div id="canvas-container"></div>
+            <div class="hud-overlay">
+                <span class="badge">Left Click: Rotate | Right Click: Pan | Scroll: Zoom</span>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
