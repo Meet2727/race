@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realistic 3D Female Character Studio & Customizer</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+</head>
+<body>
+    <div id="app">
+        <!-- Left Sidebar: Character & Model Selection -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-badge">PBR 3D ENGINE v2.0</div>
+                <h1>Realistic 3D Character Studio</h1>
+                <p>Full-Body Female 3D Model + Image-to-3D PBR Converter</p>
+            </div>
+
+            <div class="control-section">
+                <h3>1. Your Uploaded Characters (3D Converted)</h3>
+                <div class="preset-grid">
+                    <div class="preset-card active" data-preset="1">
+                        <img src="assets/character1.jpg" alt="Character 1">
+                        <div class="card-info">
+                            <span>Warrior (Green Eyes)</span>
+                            <small>3D Mesh + Normal/Depth</small>
+                        </div>
+                    </div>
+                    <div class="preset-card" data-preset="2">
+                        <img src="assets/character2.jpg" alt="Character 2">
+                        <div class="card-info">
+                            <span>Royal (Gold / Blonde)</span>
+                            <small>3D Mesh + Normal/Depth</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>2. 3D Model Mode & External Rigged Models</h3>
+                <div class="control-group-col">
+                    <label>Select 3D Model Architecture</label>
+                    <select id="model-mode">
+                        <option value="hybrid_fullbody">Full-Body Anatomical Female + 3D Sculpted Character</option>
+                        <option value="sculpt_only">Pure 3D Reconstructed Mesh (.OBJ from Your Image)</option>
+                        <option value="external_rigged">External Rigged 3D Character (Animated GLB)</option>
+                    </select>
+                </div>
+
+                <div class="upload-row">
+                    <label for="img-upload" class="btn-secondary">Convert Any Photo to 3D</label>
+                    <input type="file" id="img-upload" accept="image/*" hidden>
+                    <label for="glb-upload" class="btn-secondary">Import Custom .GLB/.OBJ</label>
+                    <input type="file" id="glb-upload" accept=".glb,.gltf,.obj" hidden>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>3. Realistic Skin, Hair & Body Morphs</h3>
+                <div class="control-group">
+                    <label>Skin Subsurface Tone</label>
+                    <input type="color" id="skin-color" value="#f2d2c4">
+                </div>
+                <div class="control-group">
+                    <label>Hair Color</label>
+                    <input type="color" id="hair-color" value="#241e1c">
+                </div>
+                <div class="control-group">
+                    <label>Royal Corset / Armor Color</label>
+                    <input type="color" id="outfit-color" value="#16151a">
+                </div>
+                <div class="control-group">
+                    <label>Gold Filigree / Trim Color</label>
+                    <input type="color" id="trim-color" value="#d4af37">
+                </div>
+                <div class="control-group">
+                    <label>3D Depth Sculpt Relief</label>
+                    <input type="range" id="depth-scale" min="0.05" max="0.65" step="0.01" value="0.28">
+                </div>
+                <div class="control-group">
+                    <label>PBR Normal Detail Bump</label>
+                    <input type="range" id="normal-scale" min="0" max="2.5" step="0.05" value="1.2">
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>4. Body Proportions & Studio Lighting</h3>
+                <div class="control-group">
+                    <label>Body Height Scale</label>
+                    <input type="range" id="body-height" min="0.85" max="1.15" step="0.01" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label>Waist / Hourglass Curve</label>
+                    <input type="range" id="body-width" min="0.85" max="1.2" step="0.01" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label>Armor Metalness</label>
+                    <input type="range" id="metalness" min="0" max="1" step="0.02" value="0.85">
+                </div>
+                <div class="control-group">
+                    <label>Skin / Armor Glossiness</label>
+                    <input type="range" id="roughness" min="0.05" max="0.9" step="0.02" value="0.28">
+                </div>
+                <div class="control-group">
+                    <label>Animation & Turntable</label>
+                    <select id="anim-mode">
+                        <option value="breath">Realistic Breathing + Subtle Sway</option>
+                        <option value="turntable">360° Studio Showcase Spin</option>
+                        <option value="static">Static Sculpt Inspection</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="export-obj-btn" class="btn-primary">Download 3D Model (.OBJ)</button>
+                <button id="reset-cam-btn" class="btn-secondary">Reset Camera</button>
+            </div>
+        </aside>
+
+        <!-- Center 3D Viewport -->
+        <main class="viewport">
+            <div id="loading-banner" class="loading-banner">Loading 3D Anatomical Mesh & PBR Maps...</div>
+            <div id="canvas-container"></div>
+            <div class="camera-presets">
+                <button data-cam="full">Full Body View</button>
+                <button data-cam="portrait">Close-Up Face / Bust</button>
+                <button data-cam="side">3D Depth Side Angle</button>
+            </div>
+            <div class="hud-overlay">
+                <span class="badge">Left Click: Rotate 360° | Right Click: Pan | Scroll: Zoom</span>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
