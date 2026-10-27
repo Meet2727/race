@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>MV — Interactive AI Assistant</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Top VIP Header -->
+    <header class="top-header">
+      <div class="brand-group">
+        <div class="brand-badge">MV</div>
+        <div class="brand-Meta">
+          <div class="brand-title-row">
+            <h1>MV AI</h1>
+            <span class="vip-pill">CORE v2.6</span>
+          </div>
+          <p class="status-indicator">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Online &bull; Ready to interact</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="icon-btn" id="voiceToggleBtn" title="Toggle MV Voice Output" aria-label="Toggle Voice Output">
+          <span id="voiceIcon">🔊</span>
+        </button>
+        <button class="icon-btn" id="clearChatBtn" title="Clear Chat" aria-label="Clear Chat">
+          🗑️
+        </button>
+        <button class="icon-btn" id="settingsBtn" title="AI API Settings" aria-label="Settings">
+          ⚙️
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Workspace -->
+    <main class="workspace">
+      <!-- Left / Top Panel: Interactive MV Character Display -->
+      <section class="avatar-stage" id="avatarStage">
+        <div class="avatar-card" id="avatarCard">
+          <div class="aura-ring" id="auraRing"></div>
+          <div class="avatar-frame" id="avatarFrame" title="Click to interact with MV">
+            <img
+              src="assets/mv-avatar-1.jpg"
+              alt="MV AI Avatar"
+              id="mvAvatarImg"
+              class="avatar-img"
+            />
+            <div class="avatar-overlay-gradient"></div>
+
+            <!-- Live Voice Visualizer Bars -->
+            <div class="voice-bars" id="voiceBars">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+
+            <!-- Floating Mood / Status Badge -->
+            <div class="avatar-hud-badge" id="moodBadge">Mode: Royal Gold</div>
+          </div>
+
+          <!-- Avatar Persona / Look Switcher -->
+          <div class="avatar-controls">
+            <button class="persona-btn active" data-avatar="assets/mv-avatar-1.jpg" data-mode="Royal Gold" data-theme="gold">
+              <img src="assets/mv-avatar-1.jpg" alt="Avatar 1" />
+              <span>Avatar 1 (Royal)</span>
+            </button>
+            <button class="persona-btn" data-avatar="assets/mv-avatar-2.jpg" data-mode="Shadow Tactician" data-theme="emerald">
+              <img src="assets/mv-avatar-2.jpg" alt="Avatar 2" />
+              <span>Avatar 2 (Shadow)</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right / Bottom Panel: Interactive Chat & Controls -->
+      <section class="chat-panel">
+        <!-- Quick Interaction Chips -->
+        <div class="quick-chips" id="quickChips">
+          <button class="chip" data-prompt="Hello MV! Apna introduction do.">👋 Intro</button>
+          <button class="chip" data-prompt="MV, tum mere liye kya kya kar sakti ho?">✨ Capabilities</button>
+          <button class="chip" data-prompt="Mera din productive banane ke liye 3 tips do.">🚀 Productivity Tips</button>
+          <button class="chip" data-prompt="Ek motivational quote sunao.">🔥 Motivate Me</button>
+          <button class="chip" data-prompt="Switch avatar look">🎭 Switch Look</button>
+        </div>
+
+        <!-- Scrollable Messages Container -->
+        <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+
+        <!-- Input Bar -->
+        <form class="chat-input-bar" id="chatForm" autocomplete="off">
+          <button type="button" class="mic-btn" id="micBtn" title="Speak to MV" aria-label="Voice Input">
+            🎙️
+          </button>
+          <input
+            type="text"
+            id="userInput"
+            placeholder="MV se baat karein... (Type in Hinglish, Hindi or English)"
+            required
+          />
+          <button type="submit" class="send-btn" id="sendBtn" aria-label="Send Message">
+            ➤
+          </button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <!-- Settings Modal for Optional Gemini / OpenAI API Key -->
+  <div class="modal-backdrop hidden" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>MV AI Engine Settings</h2>
+        <button class="close-modal-btn" id="closeSettingsBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-note">
+          MV ka built-in smart engine bina kisi API key ke offline/GitHub Pages par turant kaam karta hai. Agar aap live Gemini API connect karna chahte hain, toh niche apni key daal sakte hain (ye sirf aapke browser ke <code>localStorage</code> mein safe rehti hai).
+        </p>
+        <label class="field-label" for="apiKeyInput">Google Gemini API Key (Optional)</label>
+        <input
+          type="password"
+          id="apiKeyInput"
+          class="modal-input"
+          placeholder="AIzaSy..."
+        />
+        <label class="field-label" for="userNameInput">Aapka Naam (MV aapko is naam se bulayegi)</label>
+        <input
+          type="text"
+          id="userNameInput"
+          class="modal-input"
+          placeholder="e.g., Boss / Creator"
+        />
+      </div>
+      <div class="modal-footer">
+        <button class="secondary-btn" id="resetSettingsBtn">Reset</button>
+        <button class="primary-btn" id="saveSettingsBtn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
